@@ -266,12 +266,14 @@
         <p style="color:var(--muted);font-size:13px;margin:0 0 16px;">Configure purse, squad limits, minimum role requirements, and overseas cap per team, then open the room.</p>
         <div class="minreq-grid">
           <div class="field"><label>Purse per team (₹Cr)</label><input type="number" id="defaultPurse" value="120"></div>
+          <div class="field"><label>Min squad size</label><input type="number" id="minSquad" value="15"></div>
           <div class="field"><label>Max squad size</label><input type="number" id="maxSquad" value="18"></div>
           <div class="field"><label>Max overseas players</label><input type="number" id="maxOverseas" value="8"></div>
           <div class="field"><label>Min batters</label><input type="number" id="minBAT" value="5"></div>
           <div class="field"><label>Min bowlers</label><input type="number" id="minBOWL" value="5"></div>
           <div class="field"><label>Min all-rounders</label><input type="number" id="minAR" value="3"></div>
           <div class="field"><label>Min wicketkeepers</label><input type="number" id="minWK" value="2"></div>
+          <div class="field"><label>RTM cards per team</label><input type="number" id="rtmCards" value="2"></div>
         </div>
         <button class="btn" id="applyDefaults">Apply to all teams</button>
       </div>
@@ -306,6 +308,20 @@
             </div>
             <p id="megaSetMsg"></p>
           </div>
+          <div class="card" style="margin-top:16px;">
+            <h2 style="margin-bottom:8px;">Retention Phase</h2>
+            <p style="color:var(--muted);font-size:13px;margin:0 0 10px;">Before the auction, teams can retain players outright (removed from the pool, added straight to their squad), or tag a player they're releasing with Right-to-Match — if another team buys that player later, the original team can use an RTM card to match the bid and take them back.</p>
+            <div class="field">
+              <label>Retain outright — one per line: Team Short, Player Name, Price(optional, Cr)</label>
+              <textarea id="retainInput" placeholder="CSK, MS Dhoni, 4&#10;MI, Rohit Sharma, 16"></textarea>
+            </div>
+            <div class="field">
+              <label>RTM tag (stays in pool, original team can match later) — Team Short, Player Name</label>
+              <textarea id="rtmTagInput" placeholder="RCB, Virat Kohli"></textarea>
+            </div>
+            <button class="btn secondary" id="applyRetentionBtn">Apply Retention / RTM Tags</button>
+            <p id="retentionMsg" style="font-size:12px;color:var(--green);margin-top:8px;min-height:16px;"></p>
+          </div>
         </div>
       </div>
     </section>
@@ -313,6 +329,7 @@
     <!-- LIVE AUCTION -->
     <section class="view" id="view-auction">
       <div id="phaseBannerWrap"></div>
+      <div id="rtmPromptWrap"></div>
       <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
         <button class="btn secondary" id="pauseBtn">⏸ Pause Auction</button>
       </div>
@@ -607,11 +624,19 @@ const OVERSEAS = new Set([
   "Josh Inglis"
 ]);
 
+const MARQUEE_NAMES = new Set([
+  "Virat Kohli","MS Dhoni","Rohit Sharma","Jasprit Bumrah","Hardik Pandya","KL Rahul","Rashid Khan",
+  "Suryakumar Yadav","Ravindra Jadeja","Shubman Gill","Sanju Samson","Mitchell Starc","Jos Buttler",
+  "Axar Patel","Mohammed Siraj"
+]);
+
 function buildPlayerPool(){
   return RAW_PLAYERS.map((p,i)=>({
     id:"p"+i, name:p[0], role:p[1], basePrice:p[2],
     capped: !UNCAPPED.has(p[0]),
     country: OVERSEAS.has(p[0]) ? "OV" : "IN",
+    marquee: MARQUEE_NAMES.has(p[0]),
+    rtmTeam:null,
     status:"available", team:null, soldPrice:null
   }));
 }
@@ -631,7 +656,7 @@ function parseMegaAuctionText(text){
     const capped = !cappedRaw.startsWith("un");
     const countryRaw = (parts[4]||"IN").toUpperCase();
     const country = countryRaw.startsWith("O") ? "OV" : "IN";
-    players.push({id:"m"+i+"_"+Date.now(), name, role, basePrice, capped, country, status:"available", team:null, soldPrice:null});
+    players.push({id:"m"+i+"_"+Date.now(), name, role, basePrice, capped, country, marquee:false, rtmTeam:null, status:"available", team:null, soldPrice:null});
   });
   return players;
 }
@@ -693,12 +718,12 @@ function buildSummaryHtml(st, captureId){
   const teamRows = st.teams.map(t=>{
     const remaining = t.purse - t.spent;
     const counts = {BAT:0,BOWL:0,AR:0,WK:0}; t.squad.forEach(s=>counts[s.role]++);
-    const metAll = Object.keys(ROLE_LABEL).every(r=>counts[r] >= (st.minReq[r]||0));
+    const metAll = Object.keys(ROLE_LABEL).every(r=>counts[r] >= (st.minReq[r]||0)) && t.squad.length >= (st.minSquad||0);
     return `<div class="squad-card">
       <div class="squad-head" style="background:${t.color};color:${t.text}"><h3>${t.short}</h3><span class="p">₹${t.spent.toFixed(2)}Cr spent</span></div>
       <div class="squad-body" style="margin-top:8px;">
         <div class="squad-player"><span>Owner</span><span class="amt">${t.claimedBy||'Auctioneer-controlled'}</span></div>
-        <div class="squad-player"><span>Squad size</span><span class="amt">${t.squad.length}/${st.maxSquad}</span></div>
+        <div class="squad-player"><span>Squad size</span><span class="amt">${t.squad.length}/${st.maxSquad} (min ${st.minSquad||0})</span></div>
         <div class="squad-player"><span>Purse left</span><span class="amt">₹${remaining.toFixed(2)}Cr</span></div>
         <div class="squad-player"><span>Requirements met</span><span class="amt" style="color:${metAll?'var(--green)':'var(--red)'}">${metAll?'Yes':'No'}</span></div>
       </div>
@@ -756,12 +781,13 @@ const STORAGE_KEY = "iplAuction2026_v3";
 function defaultState(){
   return {
     started:false, phase:"main", paused:false,
-    teams: FRANCHISES.map(f=>({...f, purse:120, spent:0, squad:[], claimedBy:null})),
-    minReq:{BAT:5,BOWL:5,AR:3,WK:2}, maxSquad:18, maxOverseas:8,
+    teams: FRANCHISES.map(f=>({...f, purse:120, spent:0, squad:[], claimedBy:null, rtmRemaining:2})),
+    minReq:{BAT:5,BOWL:5,AR:3,WK:2}, maxSquad:18, minSquad:15, maxOverseas:8, rtmCards:2,
     players: buildPlayerPool(),
     order:null, currentIndex:0,
     unsoldOrder:null, unsoldIndex:0,
-    log:[], currentLotId:null
+    log:[], currentLotId:null,
+    pendingSale:null, pendingRTM:null
   };
 }
 let state = loadState();
@@ -835,7 +861,8 @@ function renderTeamList(){
     row.innerHTML = `<div class="swatch" style="background:${t.color};color:${t.text}">${t.short}</div>
       <input type="text" data-idx="${i}" class="teamNameInput" value="${t.name}">
       <input type="number" data-idx="${i}" class="teamPurseInput" style="max-width:100px;" value="${t.purse}" title="Purse (Cr)">
-      <span class="pill" style="min-width:110px;text-align:center;">${t.claimedBy?("👤 "+t.claimedBy):"Unclaimed"}</span>`;
+      <span class="pill" style="min-width:110px;text-align:center;">${t.claimedBy?("👤 "+t.claimedBy):"Unclaimed"}</span>
+      <span class="pill" style="min-width:70px;text-align:center;">RTM ${t.rtmRemaining!==undefined?t.rtmRemaining:state.rtmCards}</span>`;
     el.appendChild(row);
   });
   el.querySelectorAll(".teamNameInput").forEach(inp=>inp.addEventListener("input",()=>{state.teams[inp.dataset.idx].name=inp.value; saveState();}));
@@ -843,25 +870,76 @@ function renderTeamList(){
 }
 document.getElementById("applyDefaults").addEventListener("click",()=>{
   const purse = parseFloat(document.getElementById("defaultPurse").value)||120;
+  const minSquad = parseInt(document.getElementById("minSquad").value)||0;
   const maxSquad = parseInt(document.getElementById("maxSquad").value)||18;
   const maxOverseas = parseInt(document.getElementById("maxOverseas").value)||8;
+  const rtmCards = parseInt(document.getElementById("rtmCards").value)||0;
   state.minReq = {
     BAT: parseInt(document.getElementById("minBAT").value)||0,
     BOWL: parseInt(document.getElementById("minBOWL").value)||0,
     AR: parseInt(document.getElementById("minAR").value)||0,
     WK: parseInt(document.getElementById("minWK").value)||0
   };
-  state.teams.forEach(t=>t.purse=purse);
+  state.teams.forEach(t=>{ t.purse=purse; t.rtmRemaining=rtmCards; });
   state.maxSquad = maxSquad;
+  state.minSquad = minSquad;
   state.maxOverseas = maxOverseas;
+  state.rtmCards = rtmCards;
   saveState(); renderTeamList();
 });
+
+/* ---- Retention / RTM tagging ---- */
+document.getElementById("applyRetentionBtn").addEventListener("click",()=>{
+  if(state.started){ document.getElementById("retentionMsg").style.color="var(--red)"; document.getElementById("retentionMsg").textContent="Retention must be done before starting the auction."; return; }
+  const retainLines = document.getElementById("retainInput").value.split("\n").map(l=>l.trim()).filter(Boolean);
+  const rtmLines = document.getElementById("rtmTagInput").value.split("\n").map(l=>l.trim()).filter(Boolean);
+  let retained=0, tagged=0, errors=[];
+
+  retainLines.forEach(line=>{
+    const parts = line.split(",").map(s=>s.trim());
+    if(parts.length<2){ errors.push("Bad line: "+line); return; }
+    const teamShort = parts[0].toUpperCase();
+    const playerName = parts[1];
+    const priceOverride = parts[2] ? parseFloat(parts[2]) : null;
+    const team = state.teams.find(t=>t.short.toUpperCase()===teamShort);
+    const player = state.players.find(p=>p.name.toLowerCase()===playerName.toLowerCase() && p.status==="available");
+    if(!team){ errors.push("Unknown team: "+teamShort); return; }
+    if(!player){ errors.push("Player not available: "+playerName); return; }
+    const price = priceOverride!==null && !isNaN(priceOverride) ? priceOverride : player.basePrice;
+    player.status="sold"; player.team=team.short; player.soldPrice=price;
+    team.spent += price;
+    team.squad.push({name:player.name, role:player.role, capped:player.capped, country:player.country, price, retained:true});
+    retained++;
+  });
+
+  rtmLines.forEach(line=>{
+    const parts = line.split(",").map(s=>s.trim());
+    if(parts.length<2){ errors.push("Bad line: "+line); return; }
+    const teamShort = parts[0].toUpperCase();
+    const playerName = parts[1];
+    const team = state.teams.find(t=>t.short.toUpperCase()===teamShort);
+    const player = state.players.find(p=>p.name.toLowerCase()===playerName.toLowerCase() && p.status==="available");
+    if(!team){ errors.push("Unknown team: "+teamShort); return; }
+    if(!player){ errors.push("Player not available for RTM tag: "+playerName); return; }
+    player.rtmTeam = team.short;
+    tagged++;
+  });
+
+  const msgEl = document.getElementById("retentionMsg");
+  msgEl.style.color = errors.length ? "var(--red)" : "var(--green)";
+  msgEl.textContent = `Retained ${retained} player(s), RTM-tagged ${tagged} player(s).` + (errors.length?(" Issues: "+errors.join(" | ")):"");
+  saveState(); renderTeamList(); renderPool();
+});
+
 document.getElementById("startAuctionBtn").addEventListener("click",()=>{
   state.started = true;
   if(!state.order){
-    const idx = state.players.map((_,i)=>i);
-    for(let i=idx.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [idx[i],idx[j]]=[idx[j],idx[i]]; }
-    state.order = idx; state.currentIndex = 0;
+    const shuffle = arr=>{ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; };
+    const availableIdx = state.players.map((_,i)=>i).filter(i=>state.players[i].status==="available");
+    const marquee = shuffle(availableIdx.filter(i=>state.players[i].marquee));
+    const capped = shuffle(availableIdx.filter(i=>!state.players[i].marquee && state.players[i].capped));
+    const uncapped = shuffle(availableIdx.filter(i=>!state.players[i].capped));
+    state.order = [...marquee, ...capped, ...uncapped]; state.currentIndex = 0;
   }
   saveState(); showView("auction");
 });
@@ -929,8 +1007,15 @@ function currentPlayer(){
   }
 }
 
+function lotCategoryLabel(p){
+  if(!p) return "";
+  if(p.marquee) return "MARQUEE";
+  return p.capped ? "CAPPED" : "UNCAPPED";
+}
+
 function renderPhaseBanner(){
   const wrap = document.getElementById("phaseBannerWrap");
+  if(state.pendingRTM){ wrap.innerHTML=""; return; }
   if(state.paused){
     wrap.innerHTML = `<div class="phase-banner" style="border-color:var(--red);color:var(--red);"><strong>⏸ Auction Paused</strong> — bidders are notified. Resume when ready.</div>`;
     return;
@@ -938,7 +1023,7 @@ function renderPhaseBanner(){
   const mainDone = state.phase==="main" && !currentPlayer();
   if(mainDone){
     const queued = state.players.filter(p=>p.status==="unsold_queue").length;
-    wrap.innerHTML = `<div class="phase-banner">Main round complete. <strong>${queued}</strong> capped player(s) went unsold and are queued for the unsold round.
+    wrap.innerHTML = `<div class="phase-banner">Main round complete (Marquee → Capped → Uncapped). <strong>${queued}</strong> capped player(s) went unsold and are queued for the unsold round.
       <div style="margin-top:10px;"><button class="btn" id="startUnsoldBtn" ${queued===0?"disabled":""}>Start Unsold Round →</button></div></div>`;
     const b = document.getElementById("startUnsoldBtn");
     if(b) b.addEventListener("click",()=>{
@@ -950,12 +1035,14 @@ function renderPhaseBanner(){
   } else if(state.phase==="unsold"){
     wrap.innerHTML = `<div class="phase-banner">Unsold Round in progress — capped players who went unsold in the main round. Anyone unsold here is unsold for good.</div>`;
   } else {
-    wrap.innerHTML = "";
+    const p = currentPlayer();
+    wrap.innerHTML = p ? `<div class="phase-banner" style="text-align:left;padding:10px 16px;">Current segment: <strong>${lotCategoryLabel(p)}</strong> players</div>` : "";
   }
 }
 
 function renderAuction(){
   renderPhaseBanner();
+  renderRTMPrompt();
   updatePauseBtn();
   const p = currentPlayer();
   const remaining = state.phase==="main"
@@ -963,7 +1050,7 @@ function renderAuction(){
     : state.players.filter(x=>x.status==="unsold_queue").length;
   document.getElementById("poolCount").textContent = remaining + " remaining in " + (state.phase==="main"?"main round":"unsold round");
 
-  const controlsDisabled = state.paused;
+  const controlsDisabled = state.paused || !!state.pendingRTM;
   ["soldBtn","unsoldBtn","skipBtn","currentBid"].forEach(id=>{
     const el = document.getElementById(id); if(el) el.disabled = controlsDisabled || !p;
   });
@@ -979,10 +1066,10 @@ function renderAuction(){
     return;
   }
 
-  document.getElementById("lotTag").textContent = (state.phase==="main"?"LOT ":"UNSOLD LOT ")+(state.players.indexOf(p)+1);
+  document.getElementById("lotTag").textContent = (state.phase==="main"?(lotCategoryLabel(p)+" LOT "):"UNSOLD LOT ")+(state.players.indexOf(p)+1);
   document.getElementById("playerName").textContent = p.name;
   document.getElementById("playerMeta").innerHTML =
-    `<span class="pill role">${ROLE_LABEL[p.role]}</span><span class="pill capped">${p.capped?"Capped":"Uncapped"}</span><span class="pill">${p.country==="OV"?"Overseas":"Indian"}</span>`;
+    `<span class="pill role">${ROLE_LABEL[p.role]}</span><span class="pill capped">${p.capped?"Capped":"Uncapped"}</span><span class="pill">${p.country==="OV"?"Overseas":"Indian"}</span>${p.marquee?'<span class="pill" style="color:var(--gold);border-color:var(--gold);">Marquee</span>':''}${p.rtmTeam?`<span class="pill" style="color:var(--blue);border-color:var(--blue);">RTM: ${p.rtmTeam}</span>`:''}`;
   document.getElementById("basePriceVal").textContent = "₹"+p.basePrice.toFixed(2)+" Cr";
   document.getElementById("currentBid").value = "";
   document.getElementById("bidValidationMsg").textContent = "";
@@ -1045,7 +1132,7 @@ function renderTeamPicker(){
     chip.className = "team-chip"+(squadFull||overseasFull?" disabled":"")+(selectedTeamIdx===i?" selected":"");
     chip.style.background = t.color; chip.style.color = t.text;
     chip.innerHTML = `${t.short}${t.claimedBy?` <span style="font-size:10px;opacity:0.8;">(${t.claimedBy})</span>`:""}<span class="purse">₹${remainingPurse.toFixed(2)}Cr · ${t.squad.length}/${state.maxSquad} · OV ${overseasCount(t)}/${state.maxOverseas}</span>`;
-    if(!squadFull && !overseasFull && !state.paused) chip.addEventListener("click",()=>{
+    if(!squadFull && !overseasFull && !state.paused && !state.pendingRTM) chip.addEventListener("click",()=>{
       selectedTeamIdx = i; renderTeamPicker();
       const v = parseFloat(document.getElementById("currentBid").value);
       broadcastLiveBid((v && v>0)?v:null, i);
@@ -1067,7 +1154,7 @@ function renderPurseBoard(){
   [...state.teams].sort((a,b)=>(b.purse-b.spent)-(a.purse-a.spent)).forEach(t=>{
     const remaining = t.purse - t.spent;
     const row = document.createElement("div"); row.className = "purse-item";
-    row.innerHTML = `<span class="dot" style="background:${t.color}"></span><span class="name">${t.short}</span><span class="cnt">${t.squad.length}/${state.maxSquad}</span><span class="amt">₹${remaining.toFixed(2)}Cr</span>`;
+    row.innerHTML = `<span class="dot" style="background:${t.color}"></span><span class="name">${t.short}</span><span class="cnt">${t.squad.length}/${state.maxSquad} · RTM ${t.rtmRemaining!==undefined?t.rtmRemaining:0}</span><span class="amt">₹${remaining.toFixed(2)}Cr</span>`;
     el.appendChild(row);
   });
 }
@@ -1088,7 +1175,7 @@ function renderNextUp(){
   if(shown===0) el.innerHTML = `<div class="next-up-row"><span>—</span><span>End of round</span></div>`;
 }
 document.getElementById("skipBtn").addEventListener("click",()=>{
-  if(state.paused || !currentPlayer()) return;
+  if(state.paused || state.pendingRTM || !currentPlayer()) return;
   if(state.phase==="main") state.currentIndex++; else state.unsoldIndex++;
   saveState(); renderAuction();
 });
@@ -1119,8 +1206,55 @@ function stampAndAdvance(kind){
     saveState(); renderAuction();
   }, 900);
 }
+
+function finalizeSale(p, team, bidVal){
+  p.status="sold"; p.team=team.short; p.soldPrice=bidVal;
+  team.spent += bidVal;
+  team.squad.push({name:p.name, role:p.role, capped:p.capped, country:p.country, price:bidVal});
+  lastAction = {kind:"sold", phase:state.phase, playerId:p.id, teamShort:team.short, price:bidVal, prevStatus:"available"};
+  addLog(`${team.short} bought <b>${p.name}</b> for ₹${bidVal.toFixed(2)}Cr`);
+  document.getElementById("undoBtn").disabled = false;
+  stampAndAdvance("sold");
+}
+
+function renderRTMPrompt(){
+  const wrap = document.getElementById("rtmPromptWrap");
+  if(!state.pendingRTM){ wrap.innerHTML=""; return; }
+  const { playerId, buyerShort, price, rtmTeamShort } = state.pendingRTM;
+  const p = state.players.find(pl=>pl.id===playerId);
+  const rtmTeam = state.teams.find(t=>t.short===rtmTeamShort);
+  if(!p || !rtmTeam){ wrap.innerHTML=""; return; }
+  wrap.innerHTML = `<div class="phase-banner" style="border-color:var(--blue);">
+    <strong>Right to Match</strong> — ${p.name} was bought by <strong>${buyerShort}</strong> for ₹${price.toFixed(2)}Cr.
+    <strong>${rtmTeam.short}</strong> originally released this player and has ${rtmTeam.rtmRemaining} RTM card(s) left.
+    <div style="margin-top:10px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <button class="btn" id="useRtmBtn">Use RTM — ${rtmTeam.short} takes ${p.name} for ₹${price.toFixed(2)}Cr</button>
+      <button class="btn secondary" id="declineRtmBtn">Decline RTM — sale stands with ${buyerShort}</button>
+    </div>
+  </div>`;
+  document.getElementById("useRtmBtn").addEventListener("click",()=>resolveRTM(true));
+  document.getElementById("declineRtmBtn").addEventListener("click",()=>resolveRTM(false));
+}
+
+function resolveRTM(useRtm){
+  if(!state.pendingRTM || !state.pendingSale) return;
+  const { p, buyerShort, bidVal } = state.pendingSale;
+  const rtmTeamShort = state.pendingRTM.rtmTeamShort;
+  if(useRtm){
+    const rtmTeam = state.teams.find(t=>t.short===rtmTeamShort);
+    rtmTeam.rtmRemaining = Math.max(0,(rtmTeam.rtmRemaining||0)-1);
+    finalizeSale(p, rtmTeam, bidVal);
+    addLog(`${rtmTeam.short} used RTM to reclaim <b>${p.name}</b> for ₹${bidVal.toFixed(2)}Cr (from ${buyerShort})`);
+  } else {
+    const buyerTeam = state.teams.find(t=>t.short===buyerShort);
+    finalizeSale(p, buyerTeam, bidVal);
+  }
+  state.pendingRTM = null; state.pendingSale = null;
+  saveState(); renderAuction();
+}
+
 document.getElementById("soldBtn").addEventListener("click",()=>{
-  if(state.paused) return;
+  if(state.paused || state.pendingRTM) return;
   const p = currentPlayer(); if(!p) return;
   const bidVal = parseFloat(document.getElementById("currentBid").value);
   if(!bidVal||bidVal<=0){ alert("Enter a valid winning bid amount first."); return; }
@@ -1130,17 +1264,20 @@ document.getElementById("soldBtn").addEventListener("click",()=>{
   if(bidVal > rem){ alert(`${team.short} only has ₹${rem.toFixed(2)}Cr left.`); return; }
   if(team.squad.length >= state.maxSquad){ alert(`${team.short} squad is already full.`); return; }
   if(p.country==="OV" && overseasCount(team) >= state.maxOverseas){ alert(`${team.short} has already reached the overseas limit (${state.maxOverseas}).`); return; }
-  const prevStatus = p.status;
-  p.status="sold"; p.team=team.short; p.soldPrice=bidVal;
-  team.spent += bidVal;
-  team.squad.push({name:p.name, role:p.role, capped:p.capped, country:p.country, price:bidVal});
-  lastAction = {kind:"sold", phase:state.phase, playerId:p.id, teamShort:team.short, price:bidVal, prevStatus};
-  addLog(`${team.short} bought <b>${p.name}</b> for ₹${bidVal.toFixed(2)}Cr`);
-  document.getElementById("undoBtn").disabled = false;
-  stampAndAdvance("sold");
+
+  if(p.rtmTeam && p.rtmTeam!==team.short){
+    const rtmTeam = state.teams.find(t=>t.short===p.rtmTeam);
+    if(rtmTeam && rtmTeam.rtmRemaining>0){
+      state.pendingSale = {p, buyerShort:team.short, bidVal};
+      state.pendingRTM = {playerId:p.id, buyerShort:team.short, price:bidVal, rtmTeamShort:rtmTeam.short};
+      saveState(); renderAuction();
+      return;
+    }
+  }
+  finalizeSale(p, team, bidVal);
 });
 document.getElementById("unsoldBtn").addEventListener("click",()=>{
-  if(state.paused) return;
+  if(state.paused || state.pendingRTM) return;
   const p = currentPlayer(); if(!p) return;
   const prevStatus = p.status;
   if(p.capped && state.phase==="main") p.status="unsold_queue";
@@ -1180,10 +1317,10 @@ function renderSquads(){
   state.teams.forEach(t=>{
     const remaining = t.purse - t.spent;
     const card = document.createElement("div"); card.className = "squad-card";
-    let rows = t.squad.map(s=>`<div class="squad-player"><span>${s.name} <span style="color:var(--muted);font-size:11px;">(${ROLE_LABEL[s.role]}${s.capped?"":" · uncapped"}${s.country==="OV"?" · OV":""})</span></span><span class="amt">₹${s.price.toFixed(2)}Cr</span></div>`).join("");
+    let rows = t.squad.map(s=>`<div class="squad-player"><span>${s.name} <span style="color:var(--muted);font-size:11px;">(${ROLE_LABEL[s.role]}${s.capped?"":" · uncapped"}${s.country==="OV"?" · OV":""}${s.retained?" · retained":""})</span></span><span class="amt">₹${s.price.toFixed(2)}Cr</span></div>`).join("");
     if(!rows) rows = `<div class="empty-squad">No players yet</div>`;
     card.innerHTML = `<div class="squad-head" style="background:${t.color};color:${t.text}"><h3>${t.short}</h3><span class="p">₹${remaining.toFixed(2)}Cr left</span></div>
-      <div style="padding:8px 16px 0;font-size:11px;color:var(--muted);">${t.claimedBy?("👤 "+t.claimedBy):"Unclaimed"} · Overseas ${overseasCount(t)}/${state.maxOverseas}</div>
+      <div style="padding:8px 16px 0;font-size:11px;color:var(--muted);">${t.claimedBy?("👤 "+t.claimedBy):"Unclaimed"} · Overseas ${overseasCount(t)}/${state.maxOverseas} · RTM ${t.rtmRemaining!==undefined?t.rtmRemaining:0}</div>
       <div class="req-bars">${reqBarsHtmlFor(t, state)}</div>
       <div class="squad-body" style="margin-top:8px;">${rows}</div>`;
     el.appendChild(card);
@@ -1241,7 +1378,7 @@ function renderPool(){
       if(p.status==="sold") statusHtml=`<span class="status-sold">SOLD</span>`;
       if(p.status==="unsold") statusHtml=`<span class="status-unsold">UNSOLD</span>`;
       if(p.status==="unsold_queue") statusHtml=`<span class="status-queue">AWAITING UNSOLD ROUND</span>`;
-      tr.innerHTML = `<td>${p.name}</td><td>${ROLE_LABEL[p.role]}</td><td>${p.capped?"Capped":"Uncapped"}</td><td>${p.country==="OV"?"Overseas":"Indian"}</td>
+      tr.innerHTML = `<td>${p.name}${p.marquee?' <span class="pill" style="color:var(--gold);border-color:var(--gold);">M</span>':''}${p.rtmTeam?` <span class="pill" style="color:var(--blue);border-color:var(--blue);">RTM:${p.rtmTeam}</span>`:''}</td><td>${ROLE_LABEL[p.role]}</td><td>${p.capped?"Capped":"Uncapped"}</td><td>${p.country==="OV"?"Overseas":"Indian"}</td>
         <td class="mono">₹${p.basePrice.toFixed(2)}Cr</td><td>${statusHtml}</td><td>${p.team||"—"}</td>
         <td class="mono">${p.soldPrice?("₹"+p.soldPrice.toFixed(2)+"Cr"):"—"}</td>
         <td>${p.status!=="available"?`<button class="btn secondary" style="padding:5px 10px;font-size:11px;" data-undo="${p.id}">Undo</button>`:""}</td>`;
@@ -1497,13 +1634,17 @@ function renderMyTeamStrip(){
       <span>Purse<span class="n">₹${remaining.toFixed(2)}Cr / ₹${t.purse.toFixed(2)}Cr</span></span>
       <span>Squad<span class="n">${t.squad.length}/${remoteState.maxSquad}</span></span>
       <span>Overseas<span class="n">${overseasCountForRemote(t)}/${remoteState.maxOverseas}</span></span>
+      <span>RTM<span class="n">${t.rtmRemaining!==undefined?t.rtmRemaining:0}</span></span>
       <div class="mts-req">${reqChipsHtmlFor(t, remoteState)}</div>
     </div>`;
 }
 
 function renderPhaseBannerBidder(){
   let html="";
-  if(remoteState.paused){
+  if(remoteState.pendingRTM){
+    const p = remoteState.players.find(pl=>pl.id===remoteState.pendingRTM.playerId);
+    html = `<div class="phase-banner" style="border-color:var(--blue);">Right to Match in progress for <strong>${p?p.name:"a player"}</strong> — waiting on the auctioneer.</div>`;
+  } else if(remoteState.paused){
     html=`<div class="phase-banner" style="border-color:var(--red);color:var(--red);"><strong>⏸ Auction Paused</strong> by the auctioneer. Hang tight.</div>`;
   } else if(remoteState.phase==="unsold"){
     html=`<div class="phase-banner">Unsold Round in progress — capped players who went unsold earlier.</div>`;
@@ -1519,11 +1660,11 @@ function renderCurrentLotCard(){
     const remainingCount = remoteState.players.filter(p=>p.status===(remoteState.phase==="main"?"available":"unsold_queue")).length;
     cp.innerHTML = `
       <div class="spotlight-top">
-        <span class="lot-tag">${remoteState.phase==="main"?"LOT":"UNSOLD LOT"} ${lotNum>=0?lotNum+1:"—"}</span>
+        <span class="lot-tag">${remoteState.phase==="main"?(lot.marquee?"MARQUEE":(lot.capped?"CAPPED":"UNCAPPED")):"UNSOLD LOT"} ${lotNum>=0?lotNum+1:"—"}</span>
         <span class="pool-count">${remainingCount} remaining</span>
       </div>
       <h2 class="player-name">${lot.name}</h2>
-      <div class="player-meta"><span class="pill role">${ROLE_LABEL[lot.role]}</span><span class="pill capped">${lot.capped?"Capped":"Uncapped"}</span><span class="pill">${lot.country==="OV"?"Overseas":"Indian"}</span></div>
+      <div class="player-meta"><span class="pill role">${ROLE_LABEL[lot.role]}</span><span class="pill capped">${lot.capped?"Capped":"Uncapped"}</span><span class="pill">${lot.country==="OV"?"Overseas":"Indian"}</span>${lot.rtmTeam?`<span class="pill" style="color:var(--blue);border-color:var(--blue);">RTM: ${lot.rtmTeam}</span>`:''}</div>
       <div class="base-price-strip">
         <div><div class="label">Base price</div><div class="val">₹${lot.basePrice.toFixed(2)} Cr</div></div>
       </div>
@@ -1595,10 +1736,10 @@ function renderSquadsGrid(){
   remoteState.teams.forEach(tt=>{
     const remaining=tt.purse-tt.spent;
     const card=document.createElement("div"); card.className="squad-card";
-    let rows=tt.squad.map(s=>`<div class="squad-player"><span>${s.name} <span style="color:var(--muted);font-size:11px;">(${ROLE_LABEL[s.role]}${s.capped?"":" · uncapped"}${s.country==="OV"?" · OV":""})</span></span><span class="amt">₹${s.price.toFixed(2)}Cr</span></div>`).join("");
+    let rows=tt.squad.map(s=>`<div class="squad-player"><span>${s.name} <span style="color:var(--muted);font-size:11px;">(${ROLE_LABEL[s.role]}${s.capped?"":" · uncapped"}${s.country==="OV"?" · OV":""}${s.retained?" · retained":""})</span></span><span class="amt">₹${s.price.toFixed(2)}Cr</span></div>`).join("");
     if(!rows) rows=`<div class="empty-squad">No players yet</div>`;
     card.innerHTML=`<div class="squad-head" style="background:${tt.color};color:${tt.text}"><h3>${tt.short}${tt.short===myTeamShort?' <span class="you-tag">YOU</span>':''}</h3><span class="p">₹${remaining.toFixed(2)}Cr left</span></div>
-      <div style="padding:8px 16px 0;font-size:11px;color:var(--muted);">${tt.claimedBy?("👤 "+tt.claimedBy):"Unclaimed"}</div>
+      <div style="padding:8px 16px 0;font-size:11px;color:var(--muted);">${tt.claimedBy?("👤 "+tt.claimedBy):"Unclaimed"} · RTM ${tt.rtmRemaining!==undefined?tt.rtmRemaining:0}</div>
       <div class="req-bars">${reqBarsHtmlFor(tt, remoteState)}</div>
       <div class="squad-body" style="margin-top:8px;">${rows}</div>`;
     sg.appendChild(card);
@@ -1612,15 +1753,16 @@ function renderMyTeamCard(){
     <div class="my-team-card" style="background:${t.color};color:${t.text};">
       <h2>${t.name}</h2>
       <div class="stat-row"><span>Purse remaining</span><span>₹${remaining.toFixed(2)} Cr / ₹${t.purse.toFixed(2)} Cr</span></div>
-      <div class="stat-row"><span>Squad size</span><span>${t.squad.length} / ${remoteState.maxSquad}</span></div>
+      <div class="stat-row"><span>Squad size</span><span>${t.squad.length} / ${remoteState.maxSquad} (min ${remoteState.minSquad||0})</span></div>
       <div class="stat-row"><span>Overseas players</span><span>${overseasCountForRemote(t)} / ${remoteState.maxOverseas}</span></div>
+      <div class="stat-row"><span>RTM cards left</span><span>${t.rtmRemaining!==undefined?t.rtmRemaining:0}</span></div>
       <div class="req-bars" style="padding:8px 0 0;">${reqBarsHtmlFor(t, remoteState)}</div>
     </div>`;
 }
 function renderMyRoster(){
   const wrap=document.getElementById("myTeamRosterWrap"); if(!wrap) return;
   const t=myTeam(); if(!t){ wrap.innerHTML=""; return; }
-  let rows=t.squad.map(s=>`<div class="squad-player"><span>${s.name} <span style="color:var(--muted);font-size:11px;">(${ROLE_LABEL[s.role]}${s.capped?"":" · uncapped"}${s.country==="OV"?" · OV":""})</span></span><span class="amt">₹${s.price.toFixed(2)}Cr</span></div>`).join("");
+  let rows=t.squad.map(s=>`<div class="squad-player"><span>${s.name} <span style="color:var(--muted);font-size:11px;">(${ROLE_LABEL[s.role]}${s.capped?"":" · uncapped"}${s.country==="OV"?" · OV":""}${s.retained?" · retained":""})</span></span><span class="amt">₹${s.price.toFixed(2)}Cr</span></div>`).join("");
   if(!rows) rows=`<div class="empty-squad">No players yet</div>`;
   wrap.innerHTML=`<div class="squad-card"><div class="squad-body" style="margin-top:0;padding-top:16px;">${rows}</div></div>`;
 }
@@ -1680,7 +1822,7 @@ function renderBidderPool(){
       if(p.status==="sold") statusHtml=`<span class="status-sold">SOLD</span>`;
       if(p.status==="unsold") statusHtml=`<span class="status-unsold">UNSOLD</span>`;
       if(p.status==="unsold_queue") statusHtml=`<span class="status-queue">AWAITING UNSOLD ROUND</span>`;
-      tr.innerHTML=`<td>${p.name}</td><td>${ROLE_LABEL[p.role]}</td><td>${p.capped?"Capped":"Uncapped"}</td><td>${p.country==="OV"?"Overseas":"Indian"}</td>
+      tr.innerHTML=`<td>${p.name}${p.marquee?' <span class="pill" style="color:var(--gold);border-color:var(--gold);">M</span>':''}${p.rtmTeam?` <span class="pill" style="color:var(--blue);border-color:var(--blue);">RTM:${p.rtmTeam}</span>`:''}</td><td>${ROLE_LABEL[p.role]}</td><td>${p.capped?"Capped":"Uncapped"}</td><td>${p.country==="OV"?"Overseas":"Indian"}</td>
         <td class="mono">₹${p.basePrice.toFixed(2)}Cr</td><td>${statusHtml}</td><td>${p.team||"—"}</td>
         <td class="mono">${p.soldPrice?("₹"+p.soldPrice.toFixed(2)+"Cr"):"—"}</td>`;
       tbody.appendChild(tr);
