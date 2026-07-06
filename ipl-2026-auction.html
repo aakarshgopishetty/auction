@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auction Night — IPL 2026 Friends Auction</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Oswald:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+  :root{
+    --bg:#0a0e13; --turf-line: rgba(255,255,255,0.06);
+    --surface:#121821; --surface2:#171f2a; --line:#232d3a;
+    --text:#eef1f4; --muted:#8a96a3;
+    --gold:#f2c14e; --gold-dim:#8a6d24; --red:#e2543a; --green:#3fae6a; --blue:#4f8ff0;
+    --shadow: 0 10px 30px rgba(0,0,0,0.45);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:
+      radial-gradient(1200px 600px at 50% -10%, rgba(31,111,74,0.35), transparent 60%),
+      repeating-linear-gradient(90deg, var(--turf-line) 0 1px, transparent 1px 64px),
+      var(--bg);
+    color:var(--text); font-family:'Inter',sans-serif; min-height:100vh;}
+  h1,h2,h3{font-family:'Oswald',sans-serif; margin:0;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  a{color:var(--gold);}
+
+  header{display:flex; align-items:center; justify-content:space-between; padding:16px 28px; border-bottom:1px solid var(--line); background:rgba(10,14,19,0.75); backdrop-filter:blur(6px); position:sticky; top:0; z-index:50; flex-wrap:wrap; gap:10px;}
+  .brand{display:flex; align-items:center; gap:14px;}
+  .brand .lights{width:10px;height:10px;border-radius:50%;background:var(--gold);box-shadow:0 0 12px 3px var(--gold); animation:flicker 2.4s infinite ease-in-out;}
+  @keyframes flicker{0%,100%{opacity:1;}50%{opacity:0.4;}}
+  .brand h1{font-family:'Anton',sans-serif; font-size:24px; letter-spacing:1px; text-transform:uppercase;}
+  .brand span{color:var(--gold);}
+  nav{display:flex; gap:6px; flex-wrap:wrap;}
+  nav button{background:none;border:1px solid var(--line);color:var(--muted);padding:8px 14px;border-radius:8px;font-family:'Oswald',sans-serif;font-size:13px;letter-spacing:0.5px;cursor:pointer;transition:.15s;}
+  nav button.active{background:var(--gold);color:#241a04;border-color:var(--gold);font-weight:600;}
+  nav button:not(.active):hover{border-color:var(--gold-dim); color:var(--gold);}
+  .conn-badge{font-family:'JetBrains Mono',monospace;font-size:11px;padding:5px 10px;border-radius:20px;border:1px solid var(--line);}
+  .conn-badge.live{color:var(--green);border-color:var(--green);}
+  .conn-badge.wait{color:var(--gold);border-color:var(--gold-dim);}
+  .conn-badge.off{color:var(--red);border-color:var(--red);}
+
+  main{max-width:1400px;margin:0 auto;padding:26px 28px 80px;}
+  .view{display:none;}
+  .view.active{display:block;}
+  .page{display:none;}
+  .page.active{display:block;}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;box-shadow:var(--shadow);}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:6px;}
+  .field input, .field select{width:100%;background:var(--surface2);border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:14px;}
+  .btn{background:var(--gold);color:#241a04;border:none;padding:11px 20px;border-radius:9px;font-family:'Oswald',sans-serif;font-weight:600;letter-spacing:0.5px;font-size:14px;cursor:pointer;transition:.15s;}
+  .btn:hover{filter:brightness(1.08);}
+  .btn.secondary{background:transparent;color:var(--gold);border:1px solid var(--gold-dim);}
+  .btn.danger{background:transparent;color:var(--red);border:1px solid var(--red);}
+  .btn.blue{background:var(--blue);color:#08152e;}
+  .btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+  /* ---- Landing ---- */
+  .landing-wrap{min-height:80vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;}
+  .landing-wrap h1{font-family:'Anton',sans-serif;font-size:48px;text-transform:uppercase;margin-bottom:6px;}
+  .landing-wrap p{color:var(--muted);max-width:480px;margin-bottom:34px;}
+  .role-cards{display:flex;gap:20px;flex-wrap:wrap;justify-content:center;}
+  .role-card{width:260px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:28px 22px;cursor:pointer;transition:.15s;box-shadow:var(--shadow);}
+  .role-card:hover{border-color:var(--gold);transform:translateY(-3px);}
+  .role-card h2{font-family:'Anton',sans-serif;font-size:22px;text-transform:uppercase;margin-bottom:8px;}
+  .role-card p{color:var(--muted);font-size:13px;margin:0;}
+
+  /* ---- Setup ---- */
+  .setup-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:18px;}
+  @media(max-width:900px){.setup-grid{grid-template-columns:1fr;}}
+  .team-row{display:flex;gap:10px;align-items:center;margin-bottom:10px;}
+  .team-row .swatch{width:34px;height:34px;border-radius:8px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Anton',sans-serif;font-size:13px;color:#fff;}
+  .team-row input{flex:1;}
+  .minreq-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+  @media(max-width:560px){.minreq-grid{grid-template-columns:repeat(2,1fr);}}
+  .room-box{background:var(--surface2);border:1px dashed var(--gold-dim);border-radius:12px;padding:16px;text-align:center;margin-top:16px;}
+  .room-code{font-family:'JetBrains Mono',monospace;font-size:32px;letter-spacing:4px;color:var(--gold);margin:8px 0;}
+
+  /* ---- Auction view ---- */
+  .auction-layout{display:grid;grid-template-columns:1.3fr 1fr;gap:20px;margin-top:18px;}
+  @media(max-width:1000px){.auction-layout{grid-template-columns:1fr;}}
+  .spotlight{background:radial-gradient(circle at 50% 0%, #1a2b22 0%, var(--surface) 60%);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:var(--shadow);position:relative;}
+  .spotlight-top{padding:22px 26px 0;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;}
+  .lot-tag{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--gold);letter-spacing:1px;text-transform:uppercase;}
+  .pool-count{font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+  .player-name{font-family:'Anton',sans-serif;font-size:40px;line-height:1.05;margin:10px 26px 4px;text-transform:uppercase;}
+  .player-meta{display:flex;gap:10px;margin:0 26px 18px;flex-wrap:wrap;}
+  .pill{font-size:12px;padding:4px 11px;border-radius:20px;background:var(--surface2);border:1px solid var(--line);color:var(--muted);font-family:'Oswald',sans-serif;letter-spacing:0.4px;}
+  .pill.role{color:var(--gold);border-color:var(--gold-dim);}
+  .pill.capped{color:var(--blue);border-color:var(--blue);}
+  .base-price-strip{display:flex;justify-content:space-between;align-items:center;background:var(--surface2);border-top:1px solid var(--line);padding:16px 26px;flex-wrap:wrap;gap:10px;}
+  .base-price-strip .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;}
+  .base-price-strip .val{font-family:'JetBrains Mono',monospace;font-size:22px;color:var(--gold);}
+  .bid-zone{padding:22px 26px 26px;}
+  .bid-input-row{display:flex;gap:10px;margin-bottom:14px;}
+  .bid-input-row input{flex:1;background:var(--surface2);border:1px solid var(--line);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:22px;padding:12px 14px;border-radius:10px;}
+  .quick-bids{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;}
+  .quick-bids button{background:var(--surface2);border:1px solid var(--line);color:var(--text);padding:7px 13px;border-radius:7px;font-family:'JetBrains Mono',monospace;font-size:13px;cursor:pointer;}
+  .quick-bids button:hover{border-color:var(--gold);color:var(--gold);}
+  .team-picker{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px;}
+  @media(max-width:560px){.team-picker{grid-template-columns:repeat(2,1fr);}}
+  .team-chip{border-radius:10px;padding:10px 8px;text-align:center;cursor:pointer;border:2px solid transparent;font-family:'Oswald',sans-serif;font-size:13px;font-weight:600;letter-spacing:0.3px;color:#fff;position:relative;transition:.12s;}
+  .team-chip.selected{border-color:var(--gold);transform:translateY(-2px);}
+  .team-chip .purse{display:block;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:400;opacity:0.85;margin-top:3px;}
+  .team-chip.disabled{opacity:0.35;cursor:not-allowed;}
+  .action-row{display:flex;gap:10px;}
+  .action-row .btn{flex:1;font-size:16px;padding:14px;}
+  .sold-stamp{position:absolute;top:40%;left:50%;transform:translate(-50%,-50%) rotate(-12deg) scale(0.6);font-family:'Anton',sans-serif;font-size:60px;color:var(--green);border:6px solid var(--green);padding:6px 26px;border-radius:10px;opacity:0;pointer-events:none;text-transform:uppercase;background:rgba(10,14,19,0.55);}
+  .sold-stamp.unsold{color:var(--red);border-color:var(--red);}
+  .sold-stamp.show{animation:stamp 1.1s ease forwards;}
+  @keyframes stamp{0%{opacity:0;transform:translate(-50%,-50%) rotate(-12deg) scale(2.4);}60%{opacity:1;transform:translate(-50%,-50%) rotate(-12deg) scale(0.95);}100%{opacity:1;transform:translate(-50%,-50%) rotate(-12deg) scale(1);}}
+  .phase-banner{background:var(--surface2);border:1px dashed var(--gold-dim);border-radius:12px;padding:16px;text-align:center;margin-bottom:16px;}
+
+  .side-col{display:flex;flex-direction:column;gap:14px;}
+  .purse-board, .next-up{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow);}
+  .purse-board h3, .next-up h3{font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:12px;}
+  .purse-item{display:flex;align-items:center;gap:10px;padding:9px 8px;border-radius:9px;margin-bottom:6px;}
+  .purse-item .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+  .purse-item .name{flex:1;font-size:13px;font-family:'Oswald',sans-serif;}
+  .purse-item .amt{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--gold);}
+  .purse-item .cnt{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);}
+  .next-up-row{display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px dashed var(--line);color:var(--muted);}
+  .next-up-row span:first-child{color:var(--text);}
+
+  /* ---- Pool / squads ---- */
+  .filter-row{display:flex;gap:10px;margin:18px 0;flex-wrap:wrap;}
+  .filter-row select, .filter-row input{background:var(--surface2);border:1px solid var(--line);color:var(--text);padding:9px 12px;border-radius:8px;font-family:'Inter',sans-serif;font-size:13px;}
+  .cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:16px 0;}
+  .cat-card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;text-align:center;transition:.12s;}
+  .cat-card:hover{border-color:var(--gold);}
+  .cat-card.active{border-color:var(--gold);background:var(--surface2);}
+  .cat-card .n{font-family:'JetBrains Mono',monospace;font-size:20px;color:var(--gold);}
+  .cat-card .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;margin-top:2px;}
+  table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted);padding:12px 14px;border-bottom:1px solid var(--line);background:var(--surface2);}
+  td{padding:10px 14px;border-bottom:1px solid var(--line);font-size:13px;}
+  tr:last-child td{border-bottom:none;}
+  .status-sold{color:var(--green);font-family:'JetBrains Mono',monospace;font-size:12px;}
+  .status-unsold{color:var(--red);font-family:'JetBrains Mono',monospace;font-size:12px;}
+  .status-queue{color:var(--gold);font-family:'JetBrains Mono',monospace;font-size:12px;}
+  .status-avail{color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:12px;}
+
+  .squads-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px;margin-top:18px;}
+  .squad-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow);}
+  .squad-head{padding:14px 16px;color:#fff;display:flex;justify-content:space-between;align-items:center;}
+  .squad-head h3{font-family:'Anton',sans-serif;font-size:18px;text-transform:uppercase;}
+  .squad-head .p{font-family:'JetBrains Mono',monospace;font-size:13px;opacity:0.9;}
+  .req-bars{padding:12px 16px 0;display:flex;flex-direction:column;gap:6px;}
+  .req-bar-row{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);}
+  .req-bar-row .lbl{width:34px;flex-shrink:0;font-family:'JetBrains Mono',monospace;}
+  .req-bar-track{flex:1;height:6px;background:var(--surface2);border-radius:4px;overflow:hidden;}
+  .req-bar-fill{height:100%;background:var(--green);}
+  .req-bar-fill.short{background:var(--red);}
+  .req-bar-row .cnt{width:38px;text-align:right;font-family:'JetBrains Mono',monospace;}
+  .squad-body{padding:10px 16px;max-height:220px;overflow-y:auto;}
+  .squad-player{display:flex;justify-content:space-between;font-size:13px;padding:7px 0;border-bottom:1px solid var(--line);}
+  .squad-player:last-child{border-bottom:none;}
+  .squad-player .amt{color:var(--gold);font-family:'JetBrains Mono',monospace;}
+  .empty-squad{color:var(--muted);font-size:12px;padding:14px 0;text-align:center;}
+  .toolbar-actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;}
+  .footer-note{color:var(--muted);font-size:12px;margin-top:30px;text-align:center;}
+
+  /* ---- Bidder page ---- */
+  .join-wrap{max-width:420px;margin:60px auto;}
+  .my-team-card{border-radius:16px;padding:20px;color:#fff;box-shadow:var(--shadow);margin-bottom:16px;}
+  .my-team-card h2{font-family:'Anton',sans-serif;font-size:28px;text-transform:uppercase;}
+  .my-team-card .stat-row{display:flex;justify-content:space-between;margin-top:10px;font-family:'JetBrains Mono',monospace;font-size:14px;}
+  .waiting-box{text-align:center;padding:60px 20px;color:var(--muted);}
+  .waiting-box .pulse{width:14px;height:14px;border-radius:50%;background:var(--gold);margin:0 auto 16px;animation:flicker 1.4s infinite;}
+</style>
+</head>
+<body>
+
+<!-- ===================== LANDING ===================== -->
+<div class="page active" id="page-landing">
+  <div class="landing-wrap">
+    <h1>Auction <span style="color:var(--gold)">Night</span></h1>
+    <p>IPL 2026 — friends' auction. One person runs the auction, everyone else joins from their own phone or laptop to watch live and track their squad.</p>
+    <div class="role-cards">
+      <div class="role-card" id="chooseAuctioneer">
+        <h2>I'm the Auctioneer</h2>
+        <p>Set up teams, run the auction, call players and mark them sold or unsold.</p>
+      </div>
+      <div class="role-card" id="chooseBidder">
+        <h2>I'm a Bidder</h2>
+        <p>Join a room with a code, pick your team, and follow the auction live.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== AUCTIONEER APP ===================== -->
+<div class="page" id="page-auctioneer">
+  <header>
+    <div class="brand"><span class="lights"></span><h1>AUCTION <span>NIGHT</span></h1></div>
+    <nav id="mainNav">
+      <button data-view="setup" class="active">Setup</button>
+      <button data-view="auction">Live Auction</button>
+      <button data-view="squads">Squads</button>
+      <button data-view="pool">Player Pool</button>
+    </nav>
+    <span class="conn-badge off" id="connBadge">Not broadcasting</span>
+  </header>
+
+  <main>
+    <!-- SETUP -->
+    <section class="view active" id="view-setup">
+      <div class="card">
+        <h2 style="margin-bottom:6px;">Set the stage</h2>
+        <p style="color:var(--muted);font-size:13px;margin:0 0 16px;">Set purse, squad size, and minimum role requirements per team, then open the room.</p>
+        <div class="minreq-grid">
+          <div class="field"><label>Purse per team (₹Cr)</label><input type="number" id="defaultPurse" value="120"></div>
+          <div class="field"><label>Max squad size</label><input type="number" id="maxSquad" value="18"></div>
+          <div class="field"><label>Min batters</label><input type="number" id="minBAT" value="5"></div>
+          <div class="field"><label>Min bowlers</label><input type="number" id="minBOWL" value="5"></div>
+          <div class="field"><label>Min all-rounders</label><input type="number" id="minAR" value="3"></div>
+          <div class="field"><label>Min wicketkeepers</label><input type="number" id="minWK" value="2"></div>
+        </div>
+        <button class="btn" id="applyDefaults">Apply to all teams</button>
+      </div>
+
+      <div class="setup-grid">
+        <div class="card">
+          <h2 style="margin-bottom:14px;">Teams &amp; owners</h2>
+          <div id="teamList"></div>
+        </div>
+        <div class="card">
+          <h2 style="margin-bottom:14px;">Room</h2>
+          <p style="color:var(--muted);font-size:13px;">
+            150 real IPL 2026 players loaded, tagged by role and capped/uncapped status. Open a room, share the code with
+            your friends so they can join as bidders from their own device, then start the auction.
+          </p>
+          <div id="roomBoxWrap"></div>
+          <div class="toolbar-actions">
+            <button class="btn" id="openRoomBtn">Open Room</button>
+            <button class="btn secondary" id="startAuctionBtn" disabled>Start Auction →</button>
+            <button class="btn secondary" id="resetAllBtn">Reset Everything</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- LIVE AUCTION -->
+    <section class="view" id="view-auction">
+      <div id="phaseBannerWrap"></div>
+      <div class="auction-layout">
+        <div class="spotlight">
+          <div class="spotlight-top">
+            <span class="lot-tag" id="lotTag">LOT —</span>
+            <span class="pool-count" id="poolCount">0 remaining</span>
+          </div>
+          <h2 class="player-name" id="playerName">No player loaded</h2>
+          <div class="player-meta" id="playerMeta"></div>
+          <div class="base-price-strip">
+            <div><div class="label">Base price</div><div class="val" id="basePriceVal">₹0.00 Cr</div></div>
+            <button class="btn secondary" id="skipBtn">Skip / Next Player →</button>
+          </div>
+          <div class="bid-zone">
+            <div class="bid-input-row">
+              <span style="align-self:center;color:var(--muted);font-family:'JetBrains Mono',monospace;">₹</span>
+              <input type="number" step="0.05" id="currentBid" placeholder="Current bid amount (Cr)">
+              <span style="align-self:center;color:var(--muted);font-family:'JetBrains Mono',monospace;">Cr</span>
+            </div>
+            <div class="quick-bids" id="quickBids"></div>
+            <div class="team-picker" id="teamPicker"></div>
+            <div class="action-row">
+              <button class="btn" id="soldBtn" style="background:var(--green);color:#08210f;">Sold ✓</button>
+              <button class="btn danger" id="unsoldBtn">Unsold ✕</button>
+            </div>
+          </div>
+          <div class="sold-stamp" id="soldStamp">SOLD</div>
+        </div>
+
+        <div class="side-col">
+          <div class="purse-board"><h3>Purse remaining</h3><div id="purseList"></div></div>
+          <div class="next-up"><h3>Up next</h3><div id="nextUpList"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SQUADS -->
+    <section class="view" id="view-squads">
+      <h2 style="margin:18px 0 4px;">Team Squads</h2>
+      <p style="color:var(--muted);font-size:13px;margin:0;">Live rosters and progress against minimum role requirements.</p>
+      <div class="squads-grid" id="squadsGrid"></div>
+    </section>
+
+    <!-- POOL -->
+    <section class="view" id="view-pool">
+      <h2 style="margin:18px 0 4px;">Player Pool</h2>
+      <div class="cat-grid" id="catGrid"></div>
+      <div class="filter-row">
+        <input type="text" id="poolSearch" placeholder="Search player...">
+        <select id="poolRoleFilter"><option value="">All roles</option></select>
+        <select id="poolCappedFilter"><option value="">Capped + Uncapped</option><option value="capped">Capped only</option><option value="uncapped">Uncapped only</option></select>
+        <select id="poolStatusFilter">
+          <option value="">All status</option>
+          <option value="available">Available</option>
+          <option value="sold">Sold</option>
+          <option value="unsold_queue">Awaiting unsold round</option>
+          <option value="unsold">Unsold (final)</option>
+        </select>
+      </div>
+      <table>
+        <thead><tr><th>Player</th><th>Role</th><th>Cap</th><th>Base Price</th><th>Status</th><th>Team</th><th>Sold Price</th><th></th></tr></thead>
+        <tbody id="poolTableBody"></tbody>
+      </table>
+    </section>
+    <p class="footer-note">Auctioneer view — this device is the source of truth. Bidders connect to whatever room code is shown above.</p>
+  </main>
+</div>
+
+<!-- ===================== BIDDER APP ===================== -->
+<div class="page" id="page-bidder">
+  <header>
+    <div class="brand"><span class="lights"></span><h1>AUCTION <span>NIGHT</span></h1></div>
+    <span class="conn-badge off" id="bidderConnBadge">Not connected</span>
+  </header>
+  <main>
+    <div class="join-wrap" id="bidderJoinWrap">
+      <div class="card">
+        <h2 style="margin-bottom:6px;">Join the auction</h2>
+        <p style="color:var(--muted);font-size:13px;margin:0 0 16px;">Ask the auctioneer for the room code.</p>
+        <div class="field"><label>Room code</label><input type="text" id="roomCodeInput" placeholder="e.g. ABC123" style="text-transform:uppercase;"></div>
+        <button class="btn" id="joinRoomBtn">Connect</button>
+        <p id="joinError" style="color:var(--red);font-size:12px;margin-top:10px;"></p>
+      </div>
+    </div>
+
+    <div id="bidderDashboard" style="display:none;">
+      <div class="field" style="max-width:320px;margin-top:18px;">
+        <label>Which team are you?</label>
+        <select id="myTeamSelect"></select>
+      </div>
+      <div id="myTeamCardWrap"></div>
+
+      <div id="phaseBannerWrapBidder"></div>
+
+      <div class="card" style="margin-bottom:16px;">
+        <h3 style="text-transform:uppercase;font-size:13px;color:var(--muted);letter-spacing:1px;margin-bottom:10px;">On the block now</h3>
+        <div id="bidderCurrentPlayer"></div>
+      </div>
+
+      <div class="purse-board" style="margin-bottom:16px;"><h3>All teams — purse remaining</h3><div id="bidderPurseList"></div></div>
+
+      <h2 style="margin:20px 0 4px;">All Squads</h2>
+      <div class="squads-grid" id="bidderSquadsGrid"></div>
+
+      <h2 style="margin:24px 0 4px;">Player Pool</h2>
+      <div class="cat-grid" id="bidderCatGrid"></div>
+      <div class="filter-row">
+        <input type="text" id="bidderPoolSearch" placeholder="Search player...">
+        <select id="bidderRoleFilter"><option value="">All roles</option></select>
+        <select id="bidderCappedFilter"><option value="">Capped + Uncapped</option><option value="capped">Capped only</option><option value="uncapped">Uncapped only</option></select>
+        <select id="bidderStatusFilter">
+          <option value="">All status</option>
+          <option value="available">Available</option>
+          <option value="sold">Sold</option>
+          <option value="unsold_queue">Awaiting unsold round</option>
+          <option value="unsold">Unsold (final)</option>
+        </select>
+      </div>
+      <table>
+        <thead><tr><th>Player</th><th>Role</th><th>Cap</th><th>Base Price</th><th>Status</th><th>Team</th><th>Sold Price</th></tr></thead>
+        <tbody id="bidderPoolTableBody"></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+
+<script>
+/* ================= STATIC DATA ================= */
+const FRANCHISES = [
+  {name:"Chennai Super Kings", short:"CSK", color:"#F9CD05", text:"#111"},
+  {name:"Mumbai Indians", short:"MI", color:"#004B8D", text:"#fff"},
+  {name:"Royal Challengers Bengaluru", short:"RCB", color:"#7A1E2B", text:"#fff"},
+  {name:"Kolkata Knight Riders", short:"KKR", color:"#3A225D", text:"#fff"},
+  {name:"Delhi Capitals", short:"DC", color:"#17479E", text:"#fff"},
+  {name:"Rajasthan Royals", short:"RR", color:"#254AA5", text:"#fff"},
+  {name:"Sunrisers Hyderabad", short:"SRH", color:"#F26522", text:"#111"},
+  {name:"Gujarat Titans", short:"GT", color:"#1C1C3C", text:"#fff"},
+  {name:"Punjab Kings", short:"PBKS", color:"#A71930", text:"#fff"},
+  {name:"Lucknow Super Giants", short:"LSG", color:"#00AEEF", text:"#111"}
+];
+
+const RAW_PLAYERS = [
+  ["MS Dhoni","WK",2],["Ruturaj Gaikwad","BAT",2],["Ayush Mhatre","BAT",0.3],["Dewald Brewis","BAT",0.75],
+  ["Shivam Dube","AR",2],["Urvil Patel","WK",0.3],["Noor Ahmad","BOWL",2],["Nathan Ellis","BOWL",1],
+  ["Shreyas Gopal","BOWL",0.5],["Khaleel Ahmed","BOWL",1],["Mukesh Choudhary","BOWL",0.4],["Jamie Overton","AR",1],
+  ["Gurjapneet Singh","BOWL",0.3],["Anshul Kamboj","BOWL",0.3],["Prashant Veer","AR",14.2],["Kartik Sharma","BAT",14.2],
+  ["Rahul Chahar","BOWL",5.2],["Akeal Hosein","BOWL",2],["Matt Henry","BOWL",2],["Matthew Short","AR",1.5],
+  ["Sarfaraz Khan","BAT",0.75],["Zak Foulkes","BOWL",0.75],["Aman Khan","AR",0.4],
+  ["Rohit Sharma","BAT",2],["Hardik Pandya","AR",2],["Jasprit Bumrah","BOWL",2],["Suryakumar Yadav","BAT",2],
+  ["Tilak Varma","BAT",2],["Trent Boult","BOWL",2],["Mitchell Santner","AR",1.5],["Naman Dhir","AR",0.6],
+  ["Will Jacks","AR",1.5],["Ryan Rickelton","WK",1],["Deepak Chahar","BOWL",1],["Corbin Bosch","AR",1],
+  ["Ashwani Kumar","BOWL",0.4],["Raj Bawa","AR",0.3],["Robin Minz","WK",0.3],["AM Ghazanfar","BOWL",0.3],
+  ["Shardul Thakur","AR",2],["Sherfane Rutherford","AR",1.5],["Mayank Markande","BOWL",0.5],
+  ["Virat Kohli","BAT",2],["Rajat Patidar","BAT",2],["Yash Dayal","BOWL",1.5],["Josh Hazlewood","BOWL",2],
+  ["Bhuvneshwar Kumar","BOWL",1.5],["Jitesh Sharma","WK",1],["Krunal Pandya","AR",1.5],["Romario Shepherd","AR",1.5],
+  ["Suyash Sharma","BOWL",0.5],["Swapnil Singh","BOWL",0.3],["Venkatesh Iyer","AR",7],["Tim David","AR",2],
+  ["Devdutt Padikkal","BAT",1],["Nuwan Thushara","BOWL",1],
+  ["Shubman Gill","BAT",2],["B Sai Sudharsan","BAT",2],["Rashid Khan","BOWL",2],["Mohammed Siraj","BOWL",2],
+  ["Jos Buttler","WK",2],["Kagiso Rabada","BOWL",2],["Washington Sundar","AR",1.5],["Rahul Tewatia","AR",1],
+  ["Prasidh Krishna","BOWL",1.5],["Glenn Phillips","AR",1.5],["R Sai Kishore","BOWL",1],["Nishant Sindhu","AR",0.5],
+  ["M Shahrukh Khan","BAT",0.6],["Kumar Kushagra","WK",0.4],["Jayant Yadav","AR",0.5],["Ishant Sharma","BOWL",0.5],
+  ["Manav Suthar","BOWL",0.3],["Gurnoor Brar","BOWL",0.3],["Anuj Rawat","WK",0.3],["Arshad Khan","AR",0.3],
+  ["Jason Holder","AR",7],["Tom Banton","WK",2],["Ashok Sharma","BOWL",0.9],["Luke Wood","BOWL",0.75],["Prithvi Raj","BOWL",0.3],
+  ["Ajinkya Rahane","BAT",2],["Rinku Singh","BAT",2],["Sunil Narine","AR",2],["Varun Chakravarthy","BOWL",2],
+  ["Harshit Rana","BOWL",2],["Vaibhav Arora","BOWL",1],["Rovman Powell","AR",1.5],["Angkrish Raghuvanshi","BAT",0.5],
+  ["Umran Malik","BOWL",1],["Manish Pandey","BAT",0.75],["Ramandeep Singh","AR",0.6],["Anukul Roy","AR",0.4],
+  ["Cameron Green","AR",25.2],["Mustafizur Rahman","BOWL",9.2],["Matheesha Pathirana","BOWL",18],
+  ["Tejasvi Singh","BOWL",3],["Finn Allen","WK",2],["Rachin Ravindra","AR",2],["Tim Seifert","WK",1.5],
+  ["Blessing Muzarabani","BOWL",1],["Saurabh Dubey","BOWL",0.3],
+  ["Sanju Samson","WK",2],["Ravindra Jadeja","AR",2],["Sam Curran","AR",2],
+  ["Nitish Rana","BAT",2],["Abishek Porel","WK",1.5],["Ajay Mandal","AR",0.5],["Ashutosh Sharma","BAT",1.5],
+  ["Axar Patel","AR",2],["Dushmantha Chameera","BOWL",1],["Karun Nair","BAT",1],["KL Rahul","WK",2],
+  ["Kuldeep Yadav","BOWL",2],["Madhav Tiwari","BOWL",0.4],["Mitchell Starc","BOWL",2],["Sameer Rizvi","BAT",0.6],
+  ["T Natarajan","BOWL",1.5],["Tripurana Vijay","BAT",0.3],["Tristan Stubbs","BAT",2],["Vipraj Nigam","AR",0.5],
+  ["Mukesh Kumar","BOWL",1],
+  ["Abdul Samad","AR",1],["Aiden Markram","BAT",2],["Akash Singh","BOWL",0.5],["Arjun Tendulkar","AR",0.3],
+  ["Arshin Kulkarni","BAT",0.3],["Avesh Khan","BOWL",1.5],["Ayush Badoni","BAT",0.5],["Digvesh Rathi","BOWL",0.3],
+  ["Himmat Singh","BAT",0.3],["Manimaran Siddharth","BOWL",0.3],["Matthew Breetzke","BAT",1],["Mayank Yadav","BOWL",2],
+  ["Mitchell Marsh","AR",2],["Mohsin Khan","BOWL",1],["Nicholas Pooran","WK",2],["Prince Yadav","BOWL",0.3],
+  ["Shahbaz Ahmed","AR",1],["Josh Inglis","WK",8.6],["Mukul Choudhary","BOWL",2.6],["Akshat Raghuwanshi","BAT",2.2],
+  ["Wanindu Hasaranga","AR",2],["Anrich Nortje","BOWL",2],["Naman Tiwari","BOWL",1],
+  ["Ravi Bishnoi","BOWL",7.2],["Auqib Nabi Dar","BOWL",8.4],["Quinton de Kock","WK",1],["Deepak Hooda","AR",1.5],
+  ["Jake Fraser-McGurk","BAT",2]
+];
+
+// Names classified as uncapped (everyone else defaults to capped)
+const UNCAPPED = new Set([
+  "Ayush Mhatre","Urvil Patel","Mukesh Choudhary","Gurjapneet Singh","Prashant Veer","Kartik Sharma",
+  "Zak Foulkes","Aman Khan","Ashwani Kumar","Raj Bawa","Robin Minz","Mayank Markande","Devdutt Padikkal",
+  "Suyash Sharma","Swapnil Singh","Rahul Tewatia","R Sai Kishore","Nishant Sindhu","M Shahrukh Khan",
+  "Kumar Kushagra","Manav Suthar","Gurnoor Brar","Anuj Rawat","Arshad Khan","Ashok Sharma","Prithvi Raj",
+  "Vaibhav Arora","Angkrish Raghuvanshi","Ramandeep Singh","Anukul Roy","Tejasvi Singh","Saurabh Dubey",
+  "Abishek Porel","Ajay Mandal","Ashutosh Sharma","Madhav Tiwari","Sameer Rizvi","Tripurana Vijay","Vipraj Nigam",
+  "Abdul Samad","Akash Singh","Arjun Tendulkar","Arshin Kulkarni","Ayush Badoni","Digvesh Rathi","Himmat Singh",
+  "Manimaran Siddharth","Mohsin Khan","Prince Yadav","Shahbaz Ahmed","Mukul Choudhary","Akshat Raghuwanshi",
+  "Naman Tiwari","Auqib Nabi Dar"
+]);
+
+function buildPlayerPool(){
+  return RAW_PLAYERS.map((p,i)=>({
+    id:"p"+i, name:p[0], role:p[1], basePrice:p[2],
+    capped: !UNCAPPED.has(p[0]),
+    status:"available", team:null, soldPrice:null
+  }));
+}
+const ROLE_LABEL = {BAT:"Batter",BOWL:"Bowler",AR:"All-rounder",WK:"Wicketkeeper"};
+
+/* ================= LANDING NAV ================= */
+document.getElementById("chooseAuctioneer").addEventListener("click",()=>switchPage("auctioneer"));
+document.getElementById("chooseBidder").addEventListener("click",()=>switchPage("bidder"));
+function switchPage(name){
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.getElementById("page-"+name).classList.add("active");
+}
+
+/* ================================================================
+   AUCTIONEER APP
+   ================================================================ */
+const STORAGE_KEY = "iplAuction2026_v2";
+function defaultState(){
+  return {
+    started:false, phase:"main",
+    teams: FRANCHISES.map(f=>({...f, purse:120, spent:0, squad:[]})),
+    minReq:{BAT:5,BOWL:5,AR:3,WK:2}, maxSquad:18,
+    players: buildPlayerPool(),
+    order:null, currentIndex:0,
+    unsoldOrder:null, unsoldIndex:0
+  };
+}
+let state = loadState();
+function loadState(){
+  try{ const raw = localStorage.getItem(STORAGE_KEY); if(raw) return JSON.parse(raw); }catch(e){}
+  return defaultState();
+}
+function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); broadcastState(); }
+
+/* ---- PeerJS host ---- */
+let peer=null, connections=[];
+function updateConnBadge(){
+  const el = document.getElementById("connBadge");
+  if(!peer){ el.textContent="Not broadcasting"; el.className="conn-badge off"; return; }
+  el.textContent = connections.length+" bidder(s) connected · code "+peer.id;
+  el.className = "conn-badge live";
+}
+function broadcastState(){
+  connections.forEach(c=>{ try{ c.send({type:"state", state}); }catch(e){} });
+}
+document.getElementById("openRoomBtn").addEventListener("click",()=>{
+  if(peer){ return; }
+  const roomCode = Math.random().toString(36).slice(2,7).toUpperCase();
+  peer = new Peer("ipl2026-"+roomCode, {debug:1});
+  peer.on("open", id=>{
+    document.getElementById("roomBoxWrap").innerHTML = `
+      <div class="room-box"><div style="font-size:12px;color:var(--muted);text-transform:uppercase;">Share this room code</div>
+      <div class="room-code">${roomCode}</div>
+      <div style="font-size:12px;color:var(--muted);">Bidders tap "I'm a Bidder" and enter this code.</div></div>`;
+    document.getElementById("startAuctionBtn").disabled = false;
+    updateConnBadge();
+  });
+  peer.on("connection", conn=>{
+    connections.push(conn);
+    conn.on("open", ()=>{ conn.send({type:"state", state}); updateConnBadge(); });
+    conn.on("close", ()=>{ connections = connections.filter(c=>c!==conn); updateConnBadge(); });
+  });
+  peer.on("error", err=>{ alert("Room error: "+err.type+". Try again."); });
+});
+
+/* ---- Setup view ---- */
+function renderTeamList(){
+  const el = document.getElementById("teamList"); el.innerHTML = "";
+  state.teams.forEach((t,i)=>{
+    const row = document.createElement("div"); row.className = "team-row";
+    row.innerHTML = `<div class="swatch" style="background:${t.color};color:${t.text}">${t.short}</div>
+      <input type="text" data-idx="${i}" class="teamNameInput" value="${t.name}">
+      <input type="number" data-idx="${i}" class="teamPurseInput" style="max-width:100px;" value="${t.purse}" title="Purse (Cr)">`;
+    el.appendChild(row);
+  });
+  el.querySelectorAll(".teamNameInput").forEach(inp=>inp.addEventListener("input",()=>{state.teams[inp.dataset.idx].name = inp.value; saveState();}));
+  el.querySelectorAll(".teamPurseInput").forEach(inp=>inp.addEventListener("input",()=>{state.teams[inp.dataset.idx].purse = parseFloat(inp.value)||0; saveState();}));
+}
+document.getElementById("applyDefaults").addEventListener("click",()=>{
+  const purse = parseFloat(document.getElementById("defaultPurse").value)||120;
+  const maxSquad = parseInt(document.getElementById("maxSquad").value)||18;
+  state.minReq = {
+    BAT: parseInt(document.getElementById("minBAT").value)||0,
+    BOWL: parseInt(document.getElementById("minBOWL").value)||0,
+    AR: parseInt(document.getElementById("minAR").value)||0,
+    WK: parseInt(document.getElementById("minWK").value)||0
+  };
+  state.teams.forEach(t=>t.purse=purse);
+  state.maxSquad = maxSquad;
+  saveState(); renderTeamList();
+});
+document.getElementById("startAuctionBtn").addEventListener("click",()=>{
+  state.started = true;
+  if(!state.order){
+    const idx = state.players.map((_,i)=>i);
+    for(let i=idx.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [idx[i],idx[j]]=[idx[j],idx[i]]; }
+    state.order = idx; state.currentIndex = 0;
+  }
+  saveState(); showView("auction");
+});
+document.getElementById("resetAllBtn").addEventListener("click",()=>{
+  if(confirm("This wipes all bids, squads and purses. Continue?")){
+    state = defaultState(); saveState(); renderTeamList(); showView("setup");
+  }
+});
+
+/* ---- Nav ---- */
+document.getElementById("mainNav").addEventListener("click",(e)=>{
+  const btn = e.target.closest("button[data-view]"); if(!btn) return; showView(btn.dataset.view);
+});
+function showView(name){
+  document.querySelectorAll("#page-auctioneer .view").forEach(v=>v.classList.remove("active"));
+  document.querySelectorAll("#mainNav button").forEach(b=>b.classList.remove("active"));
+  document.getElementById("view-"+name).classList.add("active");
+  document.querySelector(`#mainNav button[data-view="${name}"]`).classList.add("active");
+  if(name==="squads") renderSquads();
+  if(name==="pool") renderPool();
+  if(name==="auction") renderAuction();
+}
+
+/* ---- Auction logic ---- */
+let selectedTeamIdx = null;
+
+function currentPlayer(){
+  if(state.phase==="main"){
+    if(!state.order) return null;
+    while(state.currentIndex < state.order.length){
+      const p = state.players[state.order[state.currentIndex]];
+      if(p.status==="available") return p;
+      state.currentIndex++;
+    }
+    return null;
+  } else {
+    if(!state.unsoldOrder) return null;
+    while(state.unsoldIndex < state.unsoldOrder.length){
+      const p = state.players[state.unsoldOrder[state.unsoldIndex]];
+      if(p.status==="unsold_queue") return p;
+      state.unsoldIndex++;
+    }
+    return null;
+  }
+}
+
+function renderPhaseBanner(){
+  const wrap = document.getElementById("phaseBannerWrap");
+  const mainDone = state.phase==="main" && !currentPlayer();
+  if(mainDone){
+    const queued = state.players.filter(p=>p.status==="unsold_queue").length;
+    wrap.innerHTML = `<div class="phase-banner">Main round complete. <strong>${queued}</strong> capped player(s) went unsold and are waiting for the unsold round.
+      <div style="margin-top:10px;"><button class="btn" id="startUnsoldBtn" ${queued===0?"disabled":""}>Start Unsold Round →</button></div></div>`;
+    const b = document.getElementById("startUnsoldBtn");
+    if(b) b.addEventListener("click",()=>{
+      const idx = state.players.map((p,i)=>i).filter(i=>state.players[i].status==="unsold_queue");
+      for(let i=idx.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [idx[i],idx[j]]=[idx[j],idx[i]]; }
+      state.unsoldOrder = idx; state.unsoldIndex = 0; state.phase = "unsold";
+      saveState(); renderAuction();
+    });
+  } else if(state.phase==="unsold"){
+    wrap.innerHTML = `<div class="phase-banner">Unsold Round in progress — capped players who went unsold in the main round. Anyone unsold here is unsold for good.</div>`;
+  } else {
+    wrap.innerHTML = "";
+  }
+}
+
+function renderAuction(){
+  renderPhaseBanner();
+  const p = currentPlayer();
+  const remaining = state.phase==="main"
+    ? state.players.filter(x=>x.status==="available").length
+    : state.players.filter(x=>x.status==="unsold_queue").length;
+  document.getElementById("poolCount").textContent = remaining + " remaining in " + (state.phase==="main"?"main round":"unsold round");
+
+  if(!p){
+    document.getElementById("lotTag").textContent = state.phase==="unsold" ? "UNSOLD ROUND COMPLETE" : "ROUND COMPLETE";
+    document.getElementById("playerName").textContent = state.phase==="unsold" ? "Auction finished 🎉" : "Waiting for unsold round…";
+    document.getElementById("playerMeta").innerHTML = "";
+    document.getElementById("basePriceVal").textContent = "—";
+    document.getElementById("teamPicker").innerHTML = "";
+    document.getElementById("quickBids").innerHTML = "";
+    renderPurseBoard(); renderNextUp();
+    return;
+  }
+
+  document.getElementById("lotTag").textContent = (state.phase==="main"?"LOT ":"UNSOLD LOT ") + (state.players.indexOf(p)+1);
+  document.getElementById("playerName").textContent = p.name;
+  document.getElementById("playerMeta").innerHTML = `<span class="pill role">${ROLE_LABEL[p.role]}</span><span class="pill capped">${p.capped?"Capped":"Uncapped"}</span>`;
+  document.getElementById("basePriceVal").textContent = "₹" + p.basePrice.toFixed(2) + " Cr";
+  document.getElementById("currentBid").value = "";
+  selectedTeamIdx = null;
+
+  const qb = document.getElementById("quickBids"); qb.innerHTML = "";
+  const steps = [p.basePrice, p.basePrice+0.2, p.basePrice+0.5, p.basePrice+1, p.basePrice+2];
+  [...new Set(steps.map(s=>Math.round(s*100)/100))].forEach(v=>{
+    const b = document.createElement("button"); b.textContent = "₹"+v.toFixed(2)+"Cr";
+    b.addEventListener("click",()=>{document.getElementById("currentBid").value = v;});
+    qb.appendChild(b);
+  });
+
+  renderTeamPicker(); renderPurseBoard(); renderNextUp();
+  broadcastCurrentLot(p);
+}
+
+function broadcastCurrentLot(p){
+  state.currentLotId = p ? p.id : null;
+  saveState();
+}
+
+function renderTeamPicker(){
+  const el = document.getElementById("teamPicker"); el.innerHTML = "";
+  state.teams.forEach((t,i)=>{
+    const remainingPurse = t.purse - t.spent;
+    const squadFull = t.squad.length >= state.maxSquad;
+    const chip = document.createElement("div");
+    chip.className = "team-chip" + (squadFull?" disabled":"") + (selectedTeamIdx===i?" selected":"");
+    chip.style.background = t.color; chip.style.color = t.text;
+    chip.innerHTML = `${t.short}<span class="purse">₹${remainingPurse.toFixed(2)}Cr · ${t.squad.length}/${state.maxSquad}</span>`;
+    if(!squadFull) chip.addEventListener("click",()=>{ selectedTeamIdx = i; renderTeamPicker(); });
+    el.appendChild(chip);
+  });
+}
+function renderPurseBoard(){
+  const el = document.getElementById("purseList"); el.innerHTML = "";
+  const sorted = [...state.teams].sort((a,b)=>(b.purse-b.spent)-(a.purse-a.spent));
+  sorted.forEach(t=>{
+    const remaining = t.purse - t.spent;
+    const row = document.createElement("div"); row.className = "purse-item";
+    row.innerHTML = `<span class="dot" style="background:${t.color}"></span><span class="name">${t.short}</span><span class="cnt">${t.squad.length}/${state.maxSquad}</span><span class="amt">₹${remaining.toFixed(2)}Cr</span>`;
+    el.appendChild(row);
+  });
+}
+function renderNextUp(){
+  const el = document.getElementById("nextUpList"); el.innerHTML = "";
+  const list = state.phase==="main" ? state.order : state.unsoldOrder;
+  const idxNow = state.phase==="main" ? state.currentIndex : state.unsoldIndex;
+  const statusMatch = state.phase==="main" ? "available" : "unsold_queue";
+  if(!list){ return; }
+  let shown = 0;
+  for(let i=idxNow+1; i<list.length && shown<5; i++){
+    const p = state.players[list[i]];
+    if(p.status!==statusMatch) continue;
+    const row = document.createElement("div"); row.className = "next-up-row";
+    row.innerHTML = `<span>${p.name}</span><span>${ROLE_LABEL[p.role]} · ₹${p.basePrice.toFixed(2)}Cr</span>`;
+    el.appendChild(row); shown++;
+  }
+  if(shown===0) el.innerHTML = `<div class="next-up-row"><span>—</span><span>End of round</span></div>`;
+}
+
+document.getElementById("skipBtn").addEventListener("click",()=>{
+  if(!currentPlayer()) return;
+  if(state.phase==="main") state.currentIndex++; else state.unsoldIndex++;
+  saveState(); renderAuction();
+});
+function stampAndAdvance(kind){
+  const stamp = document.getElementById("soldStamp");
+  stamp.textContent = kind==="sold" ? "SOLD" : "UNSOLD";
+  stamp.className = "sold-stamp show" + (kind==="unsold" ? " unsold" : "");
+  setTimeout(()=>{
+    stamp.className = "sold-stamp";
+    if(state.phase==="main") state.currentIndex++; else state.unsoldIndex++;
+    saveState(); renderAuction();
+  }, 900);
+}
+document.getElementById("soldBtn").addEventListener("click",()=>{
+  const p = currentPlayer(); if(!p) return;
+  const bidVal = parseFloat(document.getElementById("currentBid").value);
+  if(!bidVal || bidVal<=0){ alert("Enter a valid winning bid amount first."); return; }
+  if(selectedTeamIdx===null){ alert("Select which team won the bid."); return; }
+  const team = state.teams[selectedTeamIdx];
+  const remaining = team.purse - team.spent;
+  if(bidVal > remaining){ alert(`${team.short} only has ₹${remaining.toFixed(2)}Cr left.`); return; }
+  if(team.squad.length >= state.maxSquad){ alert(`${team.short} squad is already full.`); return; }
+  p.status = "sold"; p.team = team.short; p.soldPrice = bidVal;
+  team.spent += bidVal;
+  team.squad.push({name:p.name, role:p.role, capped:p.capped, price:bidVal});
+  stampAndAdvance("sold");
+});
+document.getElementById("unsoldBtn").addEventListener("click",()=>{
+  const p = currentPlayer(); if(!p) return;
+  if(p.capped && state.phase==="main") p.status = "unsold_queue";
+  else p.status = "unsold";
+  stampAndAdvance("unsold");
+});
+
+/* ---- Squads view ---- */
+function reqBarsHtml(t){
+  const counts = {BAT:0,BOWL:0,AR:0,WK:0};
+  t.squad.forEach(s=>counts[s.role]++);
+  return Object.keys(ROLE_LABEL).map(r=>{
+    const need = state.minReq[r]||0;
+    const have = counts[r];
+    const pct = need>0 ? Math.min(100,(have/need)*100) : 100;
+    const short = have<need;
+    return `<div class="req-bar-row"><span class="lbl">${r}</span><div class="req-bar-track"><div class="req-bar-fill${short?" short":""}" style="width:${pct}%"></div></div><span class="cnt">${have}/${need}</span></div>`;
+  }).join("");
+}
+function renderSquads(){
+  const el = document.getElementById("squadsGrid"); el.innerHTML = "";
+  state.teams.forEach(t=>{
+    const remaining = t.purse - t.spent;
+    const card = document.createElement("div"); card.className = "squad-card";
+    let rows = t.squad.map(s=>`<div class="squad-player"><span>${s.name} <span style="color:var(--muted);font-size:11px;">(${ROLE_LABEL[s.role]}${s.capped?"":" · uncapped"})</span></span><span class="amt">₹${s.price.toFixed(2)}Cr</span></div>`).join("");
+    if(!rows) rows = `<div class="empty-squad">No players yet</div>`;
+    card.innerHTML = `<div class="squad-head" style="background:${t.color};color:${t.text}"><h3>${t.short}</h3><span class="p">₹${remaining.toFixed(2)}Cr left</span></div>
+      <div class="req-bars">${reqBarsHtml(t)}</div>
+      <div class="squad-body" style="margin-top:8px;">${rows}</div>`;
+    el.appendChild(card);
+  });
+}
+
+/* ---- Pool view ---- */
+function populateRoleFilter(sel){
+  if(sel.options.length>1) return;
+  Object.entries(ROLE_LABEL).forEach(([k,v])=>{ const o=document.createElement("option"); o.value=k; o.textContent=v; sel.appendChild(o); });
+}
+function categoryCounts(){
+  const cats = [];
+  Object.keys(ROLE_LABEL).forEach(role=>{
+    [true,false].forEach(capped=>{
+      const n = state.players.filter(p=>p.role===role && p.capped===capped && p.status==="available").length;
+      cats.push({role, capped, n});
+    });
+  });
+  return cats;
+}
+let poolCatFilter = null; // {role, capped} or null
+function renderCatGrid(){
+  const el = document.getElementById("catGrid"); el.innerHTML = "";
+  categoryCounts().forEach(c=>{
+    const div = document.createElement("div");
+    const active = poolCatFilter && poolCatFilter.role===c.role && poolCatFilter.capped===c.capped;
+    div.className = "cat-card" + (active?" active":"");
+    div.innerHTML = `<div class="n">${c.n}</div><div class="l">${ROLE_LABEL[c.role]}<br>${c.capped?"Capped":"Uncapped"}</div>`;
+    div.addEventListener("click",()=>{
+      poolCatFilter = active ? null : {role:c.role, capped:c.capped};
+      document.getElementById("poolRoleFilter").value = poolCatFilter ? poolCatFilter.role : "";
+      document.getElementById("poolCappedFilter").value = poolCatFilter ? (poolCatFilter.capped?"capped":"uncapped") : "";
+      renderPool();
+    });
+    el.appendChild(div);
+  });
+}
+function renderPool(){
+  populateRoleFilter(document.getElementById("poolRoleFilter"));
+  renderCatGrid();
+  const search = document.getElementById("poolSearch").value.toLowerCase();
+  const roleF = document.getElementById("poolRoleFilter").value;
+  const cappedF = document.getElementById("poolCappedFilter").value;
+  const statusF = document.getElementById("poolStatusFilter").value;
+  const tbody = document.getElementById("poolTableBody"); tbody.innerHTML = "";
+  state.players
+    .filter(p=>p.name.toLowerCase().includes(search))
+    .filter(p=>!roleF || p.role===roleF)
+    .filter(p=>!cappedF || (cappedF==="capped"?p.capped:!p.capped))
+    .filter(p=>!statusF || p.status===statusF)
+    .forEach(p=>{
+      const tr = document.createElement("tr");
+      let statusHtml = `<span class="status-avail">AVAILABLE</span>`;
+      if(p.status==="sold") statusHtml = `<span class="status-sold">SOLD</span>`;
+      if(p.status==="unsold") statusHtml = `<span class="status-unsold">UNSOLD</span>`;
+      if(p.status==="unsold_queue") statusHtml = `<span class="status-queue">AWAITING UNSOLD ROUND</span>`;
+      tr.innerHTML = `<td>${p.name}</td><td>${ROLE_LABEL[p.role]}</td><td>${p.capped?"Capped":"Uncapped"}</td>
+        <td class="mono">₹${p.basePrice.toFixed(2)}Cr</td><td>${statusHtml}</td><td>${p.team||"—"}</td>
+        <td class="mono">${p.soldPrice?("₹"+p.soldPrice.toFixed(2)+"Cr"):"—"}</td>
+        <td>${p.status!=="available" ? `<button class="btn secondary" style="padding:5px 10px;font-size:11px;" data-undo="${p.id}">Undo</button>` : ""}</td>`;
+      tbody.appendChild(tr);
+    });
+  tbody.querySelectorAll("[data-undo]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const p = state.players.find(x=>x.id===btn.dataset.undo);
+      if(p.status==="sold"){
+        const team = state.teams.find(t=>t.short===p.team);
+        if(team){ team.spent -= p.soldPrice; team.squad = team.squad.filter(s=>!(s.name===p.name && s.price===p.soldPrice)); }
+      }
+      p.status="available"; p.team=null; p.soldPrice=null;
+      saveState(); renderPool();
+    });
+  });
+}
+document.getElementById("poolSearch").addEventListener("input", renderPool);
+document.getElementById("poolRoleFilter").addEventListener("change", ()=>{poolCatFilter=null; renderPool();});
+document.getElementById("poolCappedFilter").addEventListener("change", ()=>{poolCatFilter=null; renderPool();});
+document.getElementById("poolStatusFilter").addEventListener("change", renderPool);
+
+/* ---- init auctioneer ---- */
+renderTeamList();
+if(state.started) showView("auction"); else showView("setup");
+
+/* ================================================================
+   BIDDER APP
+   ================================================================ */
+let bidderPeer=null, bidderConn=null, remoteState=null, myTeamShort=null;
+
+document.getElementById("joinRoomBtn").addEventListener("click",()=>{
+  const code = document.getElementById("roomCodeInput").value.trim().toUpperCase();
+  if(!code){ document.getElementById("joinError").textContent = "Enter a room code."; return; }
+  document.getElementById("joinError").textContent = "Connecting…";
+  bidderPeer = new Peer(undefined, {debug:1});
+  bidderPeer.on("open", ()=>{
+    bidderConn = bidderPeer.connect("ipl2026-"+code, {reliable:true});
+    bidderConn.on("open", ()=>{
+      document.getElementById("joinError").textContent = "";
+      document.getElementById("bidderJoinWrap").style.display = "none";
+      document.getElementById("bidderDashboard").style.display = "block";
+      document.getElementById("bidderConnBadge").textContent = "Connected · room "+code;
+      document.getElementById("bidderConnBadge").className = "conn-badge live";
+    });
+    bidderConn.on("data", data=>{
+      if(data.type==="state"){ remoteState = data.state; renderBidderDashboard(); }
+    });
+    bidderConn.on("close", ()=>{
+      document.getElementById("bidderConnBadge").textContent = "Disconnected";
+      document.getElementById("bidderConnBadge").className = "conn-badge off";
+    });
+  });
+  bidderPeer.on("error", err=>{
+    document.getElementById("joinError").textContent = "Couldn't connect (" + err.type + "). Check the code and try again.";
+    document.getElementById("bidderConnBadge").className = "conn-badge off";
+  });
+});
+
+function myTeam(){
+  if(!remoteState || !myTeamShort) return null;
+  return remoteState.teams.find(t=>t.short===myTeamShort);
+}
+
+function renderBidderDashboard(){
+  if(!remoteState) return;
+  // team select
+  const sel = document.getElementById("myTeamSelect");
+  if(sel.options.length===0){
+    remoteState.teams.forEach(t=>{ const o=document.createElement("option"); o.value=t.short; o.textContent=t.name; sel.appendChild(o); });
+    const saved = localStorage.getItem("iplAuction2026_myTeam");
+    if(saved && remoteState.teams.some(t=>t.short===saved)){ myTeamShort = saved; sel.value = saved; }
+    else { myTeamShort = remoteState.teams[0].short; sel.value = myTeamShort; }
+    sel.addEventListener("change", ()=>{ myTeamShort = sel.value; localStorage.setItem("iplAuction2026_myTeam", myTeamShort); renderBidderDashboard(); });
+  }
+
+  const t = myTeam();
+  if(t){
+    const remaining = t.purse - t.spent;
+    document.getElementById("myTeamCardWrap").innerHTML = `
+      <div class="my-team-card" style="background:${t.color};color:${t.text};">
+        <h2>${t.name}</h2>
+        <div class="stat-row"><span>Purse remaining</span><span>₹${remaining.toFixed(2)} Cr / ₹${t.purse.toFixed(2)} Cr</span></div>
+        <div class="stat-row"><span>Squad size</span><span>${t.squad.length} / ${remoteState.maxSquad}</span></div>
+        <div class="req-bars" style="padding:8px 0 0;">${reqBarsHtmlFor(t, remoteState)}</div>
+      </div>`;
+  }
+
+  // phase banner
+  const pb = document.getElementById("phaseBannerWrapBidder");
+  pb.innerHTML = remoteState.phase==="unsold"
+    ? `<div class="phase-banner">Unsold Round in progress — capped players who went unsold earlier.</div>`
+    : "";
+
+  // current lot
+  const lot = remoteState.players.find(p=>p.id===remoteState.currentLotId);
+  const cp = document.getElementById("bidderCurrentPlayer");
+  if(lot && lot.status!=="sold" && lot.status!=="unsold"){
+    cp.innerHTML = `<h2 class="player-name" style="margin:0 0 8px;">${lot.name}</h2>
+      <div class="player-meta" style="margin:0 0 8px;"><span class="pill role">${ROLE_LABEL[lot.role]}</span><span class="pill capped">${lot.capped?"Capped":"Uncapped"}</span></div>
+      <div class="mono" style="color:var(--gold);font-size:20px;">Base price ₹${lot.basePrice.toFixed(2)} Cr</div>`;
+  } else {
+    cp.innerHTML = `<div class="waiting-box"><div class="pulse"></div>Waiting for the auctioneer to put up the next player…</div>`;
+  }
+
+  // purse list
+  const pl = document.getElementById("bidderPurseList"); pl.innerHTML = "";
+  [...remoteState.teams].sort((a,b)=>(b.purse-b.spent)-(a.purse-a.spent)).forEach(tt=>{
+    const remaining = tt.purse - tt.spent;
+    const row = document.createElement("div"); row.className = "purse-item";
+    row.innerHTML = `<span class="dot" style="background:${tt.color}"></span><span class="name">${tt.short}</span><span class="cnt">${tt.squad.length}/${remoteState.maxSquad}</span><span class="amt">₹${remaining.toFixed(2)}Cr</span>`;
+    pl.appendChild(row);
+  });
+
+  // squads grid
+  const sg = document.getElementById("bidderSquadsGrid"); sg.innerHTML = "";
+  remoteState.teams.forEach(tt=>{
+    const remaining = tt.purse - tt.spent;
+    const card = document.createElement("div"); card.className = "squad-card";
+    let rows = tt.squad.map(s=>`<div class="squad-player"><span>${s.name} <span style="color:var(--muted);font-size:11px;">(${ROLE_LABEL[s.role]}${s.capped?"":" · uncapped"})</span></span><span class="amt">₹${s.price.toFixed(2)}Cr</span></div>`).join("");
+    if(!rows) rows = `<div class="empty-squad">No players yet</div>`;
+    card.innerHTML = `<div class="squad-head" style="background:${tt.color};color:${tt.text}"><h3>${tt.short}</h3><span class="p">₹${remaining.toFixed(2)}Cr left</span></div>
+      <div class="req-bars">${reqBarsHtmlFor(tt, remoteState)}</div>
+      <div class="squad-body" style="margin-top:8px;">${rows}</div>`;
+    sg.appendChild(card);
+  });
+
+  renderBidderCatGrid();
+  renderBidderPool();
+}
+
+function reqBarsHtmlFor(t, st){
+  const counts = {BAT:0,BOWL:0,AR:0,WK:0};
+  t.squad.forEach(s=>counts[s.role]++);
+  return Object.keys(ROLE_LABEL).map(r=>{
+    const need = st.minReq[r]||0;
+    const have = counts[r];
+    const pct = need>0 ? Math.min(100,(have/need)*100) : 100;
+    const short = have<need;
+    return `<div class="req-bar-row"><span class="lbl">${r}</span><div class="req-bar-track"><div class="req-bar-fill${short?" short":""}" style="width:${pct}%"></div></div><span class="cnt">${have}/${need}</span></div>`;
+  }).join("");
+}
+
+let bidderCatFilter = null;
+function renderBidderCatGrid(){
+  const el = document.getElementById("bidderCatGrid"); el.innerHTML = "";
+  Object.keys(ROLE_LABEL).forEach(role=>{
+    [true,false].forEach(capped=>{
+      const n = remoteState.players.filter(p=>p.role===role && p.capped===capped && p.status==="available").length;
+      const div = document.createElement("div");
+      const active = bidderCatFilter && bidderCatFilter.role===role && bidderCatFilter.capped===capped;
+      div.className = "cat-card" + (active?" active":"");
+      div.innerHTML = `<div class="n">${n}</div><div class="l">${ROLE_LABEL[role]}<br>${capped?"Capped":"Uncapped"}</div>`;
+      div.addEventListener("click",()=>{
+        bidderCatFilter = active ? null : {role, capped};
+        document.getElementById("bidderRoleFilter").value = bidderCatFilter ? bidderCatFilter.role : "";
+        document.getElementById("bidderCappedFilter").value = bidderCatFilter ? (bidderCatFilter.capped?"capped":"uncapped") : "";
+        renderBidderPool();
+      });
+      el.appendChild(div);
+    });
+  });
+}
+function renderBidderPool(){
+  populateRoleFilter(document.getElementById("bidderRoleFilter"));
+  const search = document.getElementById("bidderPoolSearch").value.toLowerCase();
+  const roleF = document.getElementById("bidderRoleFilter").value;
+  const cappedF = document.getElementById("bidderCappedFilter").value;
+  const statusF = document.getElementById("bidderStatusFilter").value;
+  const tbody = document.getElementById("bidderPoolTableBody"); tbody.innerHTML = "";
+  remoteState.players
+    .filter(p=>p.name.toLowerCase().includes(search))
+    .filter(p=>!roleF || p.role===roleF)
+    .filter(p=>!cappedF || (cappedF==="capped"?p.capped:!p.capped))
+    .filter(p=>!statusF || p.status===statusF)
+    .forEach(p=>{
+      const tr = document.createElement("tr");
+      let statusHtml = `<span class="status-avail">AVAILABLE</span>`;
+      if(p.status==="sold") statusHtml = `<span class="status-sold">SOLD</span>`;
+      if(p.status==="unsold") statusHtml = `<span class="status-unsold">UNSOLD</span>`;
+      if(p.status==="unsold_queue") statusHtml = `<span class="status-queue">AWAITING UNSOLD ROUND</span>`;
+      tr.innerHTML = `<td>${p.name}</td><td>${ROLE_LABEL[p.role]}</td><td>${p.capped?"Capped":"Uncapped"}</td>
+        <td class="mono">₹${p.basePrice.toFixed(2)}Cr</td><td>${statusHtml}</td><td>${p.team||"—"}</td>
+        <td class="mono">${p.soldPrice?("₹"+p.soldPrice.toFixed(2)+"Cr"):"—"}</td>`;
+      tbody.appendChild(tr);
+    });
+}
+document.getElementById("bidderPoolSearch").addEventListener("input", renderBidderPool);
+document.getElementById("bidderRoleFilter").addEventListener("change", ()=>{bidderCatFilter=null; renderBidderPool();});
+document.getElementById("bidderCappedFilter").addEventListener("change", ()=>{bidderCatFilter=null; renderBidderPool();});
+document.getElementById("bidderStatusFilter").addEventListener("change", renderBidderPool);
+</script>
+</body>
+</html>
