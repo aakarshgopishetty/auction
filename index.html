@@ -280,19 +280,20 @@
 
       <div class="setup-grid">
         <div class="card">
-          <h2 style="margin-bottom:14px;">Teams &amp; owners</h2>
+          <h2 style="margin-bottom:6px;">Teams &amp; owners</h2>
+          <p style="color:var(--muted);font-size:13px;margin:0 0 12px;">Toggle off any franchise nobody claimed — inactive teams disappear from the auction, squads, pool and every other screen.</p>
           <div id="teamList"></div>
+          <button class="btn secondary" id="autoRemoveUnclaimedBtn" style="margin-top:6px;">Auto-remove unclaimed teams</button>
         </div>
         <div>
           <div class="card">
             <h2 style="margin-bottom:14px;">Room</h2>
             <p style="color:var(--muted);font-size:13px;">
-              150 real IPL 2026 players loaded. Open a room, share the code. Bidders join, enter their name, then claim a franchise. Start the auction when ready.
+              150 real IPL 2026 players loaded. Open a room, share the code. Bidders join, enter their name, then claim a franchise.
             </p>
             <div id="roomBoxWrap"></div>
             <div class="toolbar-actions">
               <button class="btn" id="openRoomBtn">Open Room</button>
-              <button class="btn secondary" id="startAuctionBtn" disabled>Start Auction →</button>
               <button class="btn secondary" id="resetAllBtn">Reset Everything</button>
             </div>
           </div>
@@ -308,20 +309,62 @@
             </div>
             <p id="megaSetMsg"></p>
           </div>
-          <div class="card" style="margin-top:16px;">
-            <h2 style="margin-bottom:8px;">Retention Phase</h2>
-            <p style="color:var(--muted);font-size:13px;margin:0 0 10px;">Before the auction, teams can retain players outright (removed from the pool, added straight to their squad), or tag a player they're releasing with Right-to-Match — if another team buys that player later, the original team can use an RTM card to match the bid and take them back.</p>
-            <div class="field">
-              <label>Retain outright — one per line: Team Short, Player Name, Price(optional, Cr)</label>
-              <textarea id="retainInput" placeholder="CSK, MS Dhoni, 4&#10;MI, Rohit Sharma, 16"></textarea>
-            </div>
-            <div class="field">
-              <label>RTM tag (stays in pool, original team can match later) — Team Short, Player Name</label>
-              <textarea id="rtmTagInput" placeholder="RCB, Virat Kohli"></textarea>
-            </div>
-            <button class="btn secondary" id="applyRetentionBtn">Apply Retention / RTM Tags</button>
-            <p id="retentionMsg" style="font-size:12px;color:var(--green);margin-top:8px;min-height:16px;"></p>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+          <h2 style="margin:0;">Pre-Auction Flow</h2>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <span class="pill" id="stageStepTeams">1. Teams</span>
+            <span class="pill" id="stageStepRetention">2. Retention</span>
+            <span class="pill" id="stageStepTrading">3. Trading</span>
+            <span class="pill" id="stageStepAuction">4. Auction</span>
           </div>
+        </div>
+        <div id="lockTeamsWrap" style="margin-top:14px;"></div>
+      </div>
+
+      <!-- RETENTION ROUND -->
+      <div class="card" style="margin-top:16px;display:none;" id="retentionCard">
+        <h2 style="margin-bottom:6px;">Retention Round</h2>
+        <p style="color:var(--muted);font-size:13px;margin:0 0 14px;">Each team gets a turn to retain players outright from the pool before the auction begins. Retained players go straight into that team's squad at the price entered (defaults to base price).</p>
+        <div id="retentionTurnWrap"></div>
+      </div>
+
+      <!-- TRADING WINDOW -->
+      <div class="card" style="margin-top:16px;display:none;" id="tradingCard">
+        <h2 style="margin-bottom:6px;">Trading Window</h2>
+        <p style="color:var(--muted);font-size:13px;margin:0 0 10px;">Teams can swap retained players and adjust purses before the auction starts. One trade per line: <span style="color:var(--gold);font-family:'JetBrains Mono',monospace;">TeamA, PlayerName, TeamB, PriceTeamBPaysTeamA(optional)</span> — moves the player from TeamA's squad to TeamB's squad.</p>
+        <div class="field">
+          <textarea id="tradeInput" placeholder="CSK, MS Dhoni, MI, 2&#10;RCB, Virat Kohli, RR"></textarea>
+        </div>
+        <button class="btn secondary" id="applyTradeBtn">Execute Trades</button>
+        <p id="tradeMsg" style="font-size:12px;color:var(--green);margin-top:8px;min-height:16px;"></p>
+        <div id="tradeLogWrap" style="margin-top:10px;"></div>
+        <div class="toolbar-actions">
+          <button class="btn" id="finishTradingBtn">Finish Trading Window → Enable Main Auction</button>
+        </div>
+      </div>
+
+      <!-- RTM TAGGING (usable any time before auction) -->
+      <div class="card" style="margin-top:16px;">
+        <h2 style="margin-bottom:8px;">Right-to-Match Tagging</h2>
+        <p style="color:var(--muted);font-size:13px;margin:0 0 10px;">Tag a player a team is releasing into the auction with RTM — if another team buys them later, the original team can burn an RTM card to match the bid and take them back. Player stays in the pool.</p>
+        <div class="field">
+          <textarea id="rtmTagInput" placeholder="RCB, Virat Kohli"></textarea>
+        </div>
+        <button class="btn secondary" id="applyRtmTagBtn">Apply RTM Tags</button>
+        <p id="retentionMsg" style="font-size:12px;color:var(--green);margin-top:8px;min-height:16px;"></p>
+      </div>
+
+      <div class="card" style="margin-top:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+          <div>
+            <h2 style="margin:0;">Ready to auction?</h2>
+            <p style="color:var(--muted);font-size:13px;margin:6px 0 0;" id="readyMsg">Lock teams, run retention, then trading, before this unlocks.</p>
+          </div>
+          <button class="btn secondary" id="startAuctionBtn" disabled>Start Auction →</button>
         </div>
       </div>
     </section>
@@ -781,7 +824,9 @@ const STORAGE_KEY = "iplAuction2026_v3";
 function defaultState(){
   return {
     started:false, phase:"main", paused:false,
-    teams: FRANCHISES.map(f=>({...f, purse:120, spent:0, squad:[], claimedBy:null, rtmRemaining:2})),
+    setupStage:"teams", // teams -> retention -> trading -> done
+    retentionTurnIdx:0, retentionLog:[], tradeLog:[],
+    teams: FRANCHISES.map(f=>({...f, purse:120, spent:0, squad:[], claimedBy:null, rtmRemaining:2, active:true})),
     minReq:{BAT:5,BOWL:5,AR:3,WK:2}, maxSquad:18, minSquad:15, maxOverseas:8, rtmCards:2,
     players: buildPlayerPool(),
     order:null, currentIndex:0,
@@ -790,6 +835,7 @@ function defaultState(){
     pendingSale:null, pendingRTM:null
   };
 }
+function activeTeams(st){ return st.teams.filter(t=>t.active!==false); }
 let state = loadState();
 function loadState(){
   try{ const raw = localStorage.getItem(STORAGE_KEY); if(raw) return JSON.parse(raw); }catch(e){}
@@ -818,7 +864,6 @@ document.getElementById("openRoomBtn").addEventListener("click",()=>{
       <div class="room-box"><div style="font-size:12px;color:var(--muted);text-transform:uppercase;">Share this room code</div>
       <div class="room-code">${roomCode}</div>
       <div style="font-size:12px;color:var(--muted);">Bidders tap "I'm a Bidder", enter their name and this code, then claim a franchise.</div></div>`;
-    document.getElementById("startAuctionBtn").disabled = false;
     updateConnBadge();
   });
   peer.on("connection", conn=>{
@@ -858,16 +903,173 @@ function renderTeamList(){
   const el = document.getElementById("teamList"); el.innerHTML = "";
   state.teams.forEach((t,i)=>{
     const row = document.createElement("div"); row.className = "team-row";
+    if(t.active===false) row.style.opacity="0.4";
     row.innerHTML = `<div class="swatch" style="background:${t.color};color:${t.text}">${t.short}</div>
-      <input type="text" data-idx="${i}" class="teamNameInput" value="${t.name}">
-      <input type="number" data-idx="${i}" class="teamPurseInput" style="max-width:100px;" value="${t.purse}" title="Purse (Cr)">
+      <input type="text" data-idx="${i}" class="teamNameInput" value="${t.name}" ${state.setupStage!=="teams"?"disabled":""}>
+      <input type="number" data-idx="${i}" class="teamPurseInput" style="max-width:100px;" value="${t.purse}" title="Purse (Cr)" ${state.setupStage!=="teams"?"disabled":""}>
       <span class="pill" style="min-width:110px;text-align:center;">${t.claimedBy?("👤 "+t.claimedBy):"Unclaimed"}</span>
-      <span class="pill" style="min-width:70px;text-align:center;">RTM ${t.rtmRemaining!==undefined?t.rtmRemaining:state.rtmCards}</span>`;
+      <span class="pill" style="min-width:70px;text-align:center;">RTM ${t.rtmRemaining!==undefined?t.rtmRemaining:state.rtmCards}</span>
+      <button class="btn secondary" style="padding:8px 12px;font-size:12px;" data-toggle="${i}" ${state.setupStage!=="teams"?"disabled":""}>${t.active===false?"Include":"Remove"}</button>`;
     el.appendChild(row);
   });
   el.querySelectorAll(".teamNameInput").forEach(inp=>inp.addEventListener("input",()=>{state.teams[inp.dataset.idx].name=inp.value; saveState();}));
   el.querySelectorAll(".teamPurseInput").forEach(inp=>inp.addEventListener("input",()=>{state.teams[inp.dataset.idx].purse=parseFloat(inp.value)||0; saveState();}));
+  el.querySelectorAll("[data-toggle]").forEach(btn=>btn.addEventListener("click",()=>{
+    const t = state.teams[btn.dataset.toggle];
+    t.active = t.active===false ? true : false;
+    saveState(); renderTeamList();
+  }));
 }
+document.getElementById("autoRemoveUnclaimedBtn").addEventListener("click",()=>{
+  if(state.setupStage!=="teams"){ alert("Teams are already locked for this auction."); return; }
+  state.teams.forEach(t=>{ if(!t.claimedBy) t.active=false; });
+  saveState(); renderTeamList();
+});
+
+/* ---- Pre-auction wizard: teams -> retention -> trading -> done ---- */
+function renderStageWizard(){
+  const stageOrder = ["teams","retention","trading","done"];
+  const curIdx = stageOrder.indexOf(state.setupStage);
+  ["stageStepTeams","stageStepRetention","stageStepTrading","stageStepAuction"].forEach((id,i)=>{
+    const el = document.getElementById(id);
+    el.style.color = i<=curIdx ? "var(--gold)" : "var(--muted)";
+    el.style.borderColor = i<=curIdx ? "var(--gold-dim)" : "var(--line)";
+  });
+  document.getElementById("retentionCard").style.display = (state.setupStage==="retention") ? "block" : "none";
+  document.getElementById("tradingCard").style.display = (state.setupStage==="trading") ? "block" : "none";
+  document.getElementById("startAuctionBtn").disabled = state.setupStage!=="done";
+  document.getElementById("readyMsg").textContent = state.setupStage==="done"
+    ? "All set — start the main auction whenever you're ready."
+    : "Lock teams, run retention, then trading, before this unlocks.";
+
+  const lockWrap = document.getElementById("lockTeamsWrap");
+  if(state.setupStage==="teams"){
+    const nActive = activeTeams(state).length;
+    lockWrap.innerHTML = `<p style="color:var(--muted);font-size:13px;margin:0 0 10px;">${nActive} of ${state.teams.length} franchises are active. Once locked, teams can't be added or removed.</p>
+      <button class="btn" id="lockTeamsBtn" ${nActive<2?"disabled":""}>Lock Teams & Begin Retention Round →</button>`;
+    document.getElementById("lockTeamsBtn").addEventListener("click",()=>{
+      state.setupStage="retention"; state.retentionTurnIdx=0;
+      saveState(); renderTeamList(); renderStageWizard(); renderRetentionTurn();
+    });
+  } else {
+    lockWrap.innerHTML = `<p style="color:var(--muted);font-size:13px;margin:0;">Teams locked: ${activeTeams(state).map(t=>t.short).join(", ")}</p>`;
+  }
+  if(state.setupStage==="retention") renderRetentionTurn();
+  if(state.setupStage==="trading") renderTradingCard();
+}
+
+function renderRetentionTurn(){
+  const wrap = document.getElementById("retentionTurnWrap"); if(!wrap) return;
+  const teams = activeTeams(state);
+  if(state.retentionTurnIdx >= teams.length){
+    wrap.innerHTML = `<p style="color:var(--green);font-size:13px;">Every team has had their retention turn.</p>
+      <div class="toolbar-actions"><button class="btn" id="finishRetentionBtn">Finish Retention → Trading Window</button></div>`;
+    document.getElementById("finishRetentionBtn").addEventListener("click",()=>{
+      state.setupStage="trading"; saveState(); renderStageWizard();
+    });
+    return;
+  }
+  const t = teams[state.retentionTurnIdx];
+  const remaining = t.purse - t.spent;
+  const retainedSoFar = t.squad.filter(s=>s.retained).map(s=>`<div class="squad-player"><span>${s.name}</span><span class="amt">₹${s.price.toFixed(2)}Cr</span></div>`).join("") || `<div class="empty-squad">None yet</div>`;
+  wrap.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
+      <div><span class="swatch" style="background:${t.color};color:${t.text};display:inline-flex;">${t.short}</span> <strong style="margin-left:8px;">${t.name}'s turn</strong></div>
+      <span class="pill">Purse left: ₹${remaining.toFixed(2)}Cr</span>
+    </div>
+    <div class="minreq-grid" style="grid-template-columns:2fr 1fr 1fr;">
+      <div class="field"><label>Player name</label><input type="text" id="retentionPlayerInput" placeholder="e.g. MS Dhoni"></div>
+      <div class="field"><label>Retention price (Cr)</label><input type="number" step="0.1" id="retentionPriceInput" placeholder="base price if blank"></div>
+      <div class="field" style="display:flex;align-items:flex-end;"><button class="btn secondary" id="retainNowBtn" style="width:100%;">Retain</button></div>
+    </div>
+    <p id="retentionTurnMsg" style="font-size:12px;color:var(--red);min-height:16px;"></p>
+    <h3 style="font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin:10px 0;">Retained so far</h3>
+    <div>${retainedSoFar}</div>
+    <div class="toolbar-actions">
+      <button class="btn" id="endTeamTurnBtn">${t.short} Done → Next Team</button>
+    </div>`;
+  document.getElementById("retainNowBtn").addEventListener("click",()=>{
+    const name = document.getElementById("retentionPlayerInput").value.trim();
+    const priceInput = document.getElementById("retentionPriceInput").value;
+    const msgEl = document.getElementById("retentionTurnMsg");
+    if(!name){ msgEl.textContent="Enter a player name."; return; }
+    const player = state.players.find(p=>p.name.toLowerCase()===name.toLowerCase() && p.status==="available");
+    if(!player){ msgEl.textContent="No available player found with that name."; return; }
+    const price = priceInput ? (parseFloat(priceInput)||player.basePrice) : player.basePrice;
+    if(price > remaining){ msgEl.textContent=`${t.short} only has ₹${remaining.toFixed(2)}Cr left.`; return; }
+    if(t.squad.length >= state.maxSquad){ msgEl.textContent=`${t.short} squad is already full.`; return; }
+    player.status="sold"; player.team=t.short; player.soldPrice=price;
+    t.spent += price;
+    t.squad.push({name:player.name, role:player.role, capped:player.capped, country:player.country, price, retained:true});
+    msgEl.style.color="var(--green)"; msgEl.textContent=`Retained ${player.name} for ₹${price.toFixed(2)}Cr.`;
+    saveState(); renderRetentionTurn(); renderPool();
+  });
+  document.getElementById("endTeamTurnBtn").addEventListener("click",()=>{
+    state.retentionTurnIdx++;
+    saveState(); renderRetentionTurn();
+  });
+}
+
+document.getElementById("applyRtmTagBtn").addEventListener("click",()=>{
+  const rtmLines = document.getElementById("rtmTagInput").value.split("\n").map(l=>l.trim()).filter(Boolean);
+  let tagged=0, errors=[];
+  rtmLines.forEach(line=>{
+    const parts = line.split(",").map(s=>s.trim());
+    if(parts.length<2){ errors.push("Bad line: "+line); return; }
+    const teamShort = parts[0].toUpperCase();
+    const playerName = parts[1];
+    const team = state.teams.find(t=>t.short.toUpperCase()===teamShort);
+    const player = state.players.find(p=>p.name.toLowerCase()===playerName.toLowerCase() && p.status==="available");
+    if(!team){ errors.push("Unknown team: "+teamShort); return; }
+    if(!player){ errors.push("Player not available for RTM tag: "+playerName); return; }
+    player.rtmTeam = team.short;
+    tagged++;
+  });
+  const msgEl = document.getElementById("retentionMsg");
+  msgEl.style.color = errors.length ? "var(--red)" : "var(--green)";
+  msgEl.textContent = `RTM-tagged ${tagged} player(s).` + (errors.length?(" Issues: "+errors.join(" | ")):"");
+  saveState(); renderPool();
+});
+
+function renderTradingCard(){
+  const el = document.getElementById("tradeLogWrap"); if(!el) return;
+  const log = state.tradeLog||[];
+  el.innerHTML = log.length ? log.slice().reverse().map(l=>`<div class="history-row"><span>${l}</span></div>`).join("") : `<p style="color:var(--muted);font-size:12px;">No trades yet.</p>`;
+}
+document.getElementById("applyTradeBtn").addEventListener("click",()=>{
+  const lines = document.getElementById("tradeInput").value.split("\n").map(l=>l.trim()).filter(Boolean);
+  let done=0, errors=[];
+  if(!state.tradeLog) state.tradeLog=[];
+  lines.forEach(line=>{
+    const parts = line.split(",").map(s=>s.trim());
+    if(parts.length<3){ errors.push("Bad line: "+line); return; }
+    const teamAShort = parts[0].toUpperCase(), playerName = parts[1], teamBShort = parts[2].toUpperCase();
+    const price = parts[3] ? parseFloat(parts[3])||0 : 0;
+    const teamA = state.teams.find(t=>t.short.toUpperCase()===teamAShort);
+    const teamB = state.teams.find(t=>t.short.toUpperCase()===teamBShort);
+    if(!teamA||!teamB){ errors.push("Unknown team in: "+line); return; }
+    const idx = teamA.squad.findIndex(s=>s.name.toLowerCase()===playerName.toLowerCase());
+    if(idx===-1){ errors.push(`${playerName} not found in ${teamA.short}'s squad`); return; }
+    const player = teamA.squad[idx];
+    if(teamB.squad.length >= state.maxSquad){ errors.push(`${teamB.short}'s squad is full`); return; }
+    if((teamB.purse-teamB.spent) < price){ errors.push(`${teamB.short} can't afford the ₹${price}Cr trade fee`); return; }
+    teamA.squad.splice(idx,1);
+    teamB.squad.push(player);
+    teamA.spent -= player.price; teamB.spent += player.price;
+    if(price>0){ teamB.spent += price; teamA.spent -= price; }
+    const pl = state.players.find(p=>p.name.toLowerCase()===playerName.toLowerCase());
+    if(pl) pl.team = teamB.short;
+    state.tradeLog.push(`${teamA.short} → ${teamB.short}: ${player.name}${price?` (+₹${price.toFixed(2)}Cr to ${teamA.short})`:""}`);
+    done++;
+  });
+  const msgEl = document.getElementById("tradeMsg");
+  msgEl.style.color = errors.length ? "var(--red)" : "var(--green)";
+  msgEl.textContent = `Executed ${done} trade(s).` + (errors.length?(" Issues: "+errors.join(" | ")):"");
+  saveState(); renderTradingCard(); renderSquads();
+});
+document.getElementById("finishTradingBtn").addEventListener("click",()=>{
+  state.setupStage="done"; saveState(); renderStageWizard();
+});
 document.getElementById("applyDefaults").addEventListener("click",()=>{
   const purse = parseFloat(document.getElementById("defaultPurse").value)||120;
   const minSquad = parseInt(document.getElementById("minSquad").value)||0;
@@ -888,49 +1090,6 @@ document.getElementById("applyDefaults").addEventListener("click",()=>{
   saveState(); renderTeamList();
 });
 
-/* ---- Retention / RTM tagging ---- */
-document.getElementById("applyRetentionBtn").addEventListener("click",()=>{
-  if(state.started){ document.getElementById("retentionMsg").style.color="var(--red)"; document.getElementById("retentionMsg").textContent="Retention must be done before starting the auction."; return; }
-  const retainLines = document.getElementById("retainInput").value.split("\n").map(l=>l.trim()).filter(Boolean);
-  const rtmLines = document.getElementById("rtmTagInput").value.split("\n").map(l=>l.trim()).filter(Boolean);
-  let retained=0, tagged=0, errors=[];
-
-  retainLines.forEach(line=>{
-    const parts = line.split(",").map(s=>s.trim());
-    if(parts.length<2){ errors.push("Bad line: "+line); return; }
-    const teamShort = parts[0].toUpperCase();
-    const playerName = parts[1];
-    const priceOverride = parts[2] ? parseFloat(parts[2]) : null;
-    const team = state.teams.find(t=>t.short.toUpperCase()===teamShort);
-    const player = state.players.find(p=>p.name.toLowerCase()===playerName.toLowerCase() && p.status==="available");
-    if(!team){ errors.push("Unknown team: "+teamShort); return; }
-    if(!player){ errors.push("Player not available: "+playerName); return; }
-    const price = priceOverride!==null && !isNaN(priceOverride) ? priceOverride : player.basePrice;
-    player.status="sold"; player.team=team.short; player.soldPrice=price;
-    team.spent += price;
-    team.squad.push({name:player.name, role:player.role, capped:player.capped, country:player.country, price, retained:true});
-    retained++;
-  });
-
-  rtmLines.forEach(line=>{
-    const parts = line.split(",").map(s=>s.trim());
-    if(parts.length<2){ errors.push("Bad line: "+line); return; }
-    const teamShort = parts[0].toUpperCase();
-    const playerName = parts[1];
-    const team = state.teams.find(t=>t.short.toUpperCase()===teamShort);
-    const player = state.players.find(p=>p.name.toLowerCase()===playerName.toLowerCase() && p.status==="available");
-    if(!team){ errors.push("Unknown team: "+teamShort); return; }
-    if(!player){ errors.push("Player not available for RTM tag: "+playerName); return; }
-    player.rtmTeam = team.short;
-    tagged++;
-  });
-
-  const msgEl = document.getElementById("retentionMsg");
-  msgEl.style.color = errors.length ? "var(--red)" : "var(--green)";
-  msgEl.textContent = `Retained ${retained} player(s), RTM-tagged ${tagged} player(s).` + (errors.length?(" Issues: "+errors.join(" | ")):"");
-  saveState(); renderTeamList(); renderPool();
-});
-
 document.getElementById("startAuctionBtn").addEventListener("click",()=>{
   state.started = true;
   if(!state.order){
@@ -945,7 +1104,7 @@ document.getElementById("startAuctionBtn").addEventListener("click",()=>{
 });
 document.getElementById("resetAllBtn").addEventListener("click",()=>{
   if(confirm("This wipes all bids, squads and purses. Continue?")){
-    state = defaultState(); saveState(); renderTeamList(); showView("setup");
+    state = defaultState(); saveState(); renderTeamList(); renderStageWizard(); showView("setup");
   }
 });
 document.getElementById("loadMegaSetBtn").addEventListener("click",()=>{
@@ -977,6 +1136,7 @@ function showView(name){
   document.querySelectorAll("#mainNav button").forEach(b=>b.classList.remove("active"));
   document.getElementById("view-"+name).classList.add("active");
   document.querySelector(`#mainNav button[data-view="${name}"]`).classList.add("active");
+  if(name==="setup") renderStageWizard();
   if(name==="squads") renderSquads();
   if(name==="pool") renderPool();
   if(name==="auction") renderAuction();
@@ -1435,6 +1595,7 @@ function renderStats(){
 
 /* ---- init auctioneer ---- */
 renderTeamList();
+renderStageWizard();
 if(state.started) showView("auction"); else showView("setup");
 
 /* ================================================================
