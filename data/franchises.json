@@ -1,0 +1,12 @@
+[
+  { "code": "CSK",  "name": "Chennai Super Kings",        "primary": "#F7B500", "secondary": "#142850" },
+  { "code": "DC",   "name": "Delhi Capitals",              "primary": "#17479E", "secondary": "#EF1C25" },
+  { "code": "GT",   "name": "Gujarat Titans",              "primary": "#1B2133", "secondary": "#C9A94D" },
+  { "code": "KKR",  "name": "Kolkata Knight Riders",       "primary": "#3A225D", "secondary": "#D4AF37" },
+  { "code": "LSG",  "name": "Lucknow Super Giants",        "primary": "#0057A7", "secondary": "#F4A300" },
+  { "code": "MI",   "name": "Mumbai Indians",              "primary": "#005DA4", "secondary": "#D4AF37" },
+  { "code": "PBKS", "name": "Punjab Kings",                "primary": "#ED1C24", "secondary": "#BFC0C2" },
+  { "code": "RR",   "name": "Rajasthan Royals",            "primary": "#E91E8C", "secondary": "#1B1464" },
+  { "code": "RCB",  "name": "Royal Challengers Bengaluru", "primary": "#B30000", "secondary": "#161616" },
+  { "code": "SRH",  "name": "Sunrisers Hyderabad",         "primary": "#F26522", "secondary": "#0A0A0A" }
+]
